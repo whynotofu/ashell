@@ -74,6 +74,8 @@ audio_sources_more_cmd = "pavucontrol -t 4"
 wifi_more_cmd = "nm-connection-editor"
 vpn_more_cmd = "nm-connection-editor"
 bluetooth_more_cmd = "blueberry"
+# Optional: set to show hibernate button
+# hibernate_cmd = "systemctl hibernate"
 battery_format = "IconAndPercentage"
 peripheral_battery_format = "Icon"
 audio_indicator_format = "Icon"

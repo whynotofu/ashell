@@ -67,7 +67,7 @@ pub enum Action {
 #[derive(Debug, Clone)]
 pub struct PowerSettingsConfig {
     pub suspend_cmd: String,
-    pub hibernate_cmd: String,
+    pub hibernate_cmd: Option<String>,
     pub reboot_cmd: String,
     pub shutdown_cmd: String,
     pub logout_cmd: String,
@@ -82,7 +82,7 @@ impl PowerSettingsConfig {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         suspend_cmd: String,
-        hibernate_cmd: String,
+        hibernate_cmd: Option<String>,
         reboot_cmd: String,
         shutdown_cmd: String,
         logout_cmd: String,
@@ -149,7 +149,9 @@ impl PowerSettings {
                 Action::None
             }
             Message::Hibernate => {
-                utils::launcher::hibernate(self.config.hibernate_cmd.clone());
+                if let Some(hibernate_cmd) = &self.config.hibernate_cmd {
+                    utils::launcher::hibernate(hibernate_cmd.to_string());
+                }
                 Action::None
             }
             Message::Reboot => {
@@ -178,10 +180,12 @@ impl PowerSettings {
                 .icon(StaticIcon::Suspend, IconPosition::Before)
                 .on_press(Message::Suspend)
                 .width(Length::Fill),
-            styled_button("Hibernate")
-                .icon(StaticIcon::Hibernate, IconPosition::Before)
-                .on_press(Message::Hibernate)
-                .width(Length::Fill),
+            self.config.hibernate_cmd.as_ref().map(|_| {
+                styled_button("Hibernate")
+                    .icon(StaticIcon::Hibernate, IconPosition::Before)
+                    .on_press(Message::Hibernate)
+                    .width(Length::Fill)
+            }),
             styled_button("Reboot")
                 .icon(StaticIcon::Reboot, IconPosition::Before)
                 .on_press(Message::Reboot)
