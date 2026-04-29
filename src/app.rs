@@ -467,7 +467,7 @@ impl App {
             Message::OutputEvent(event) => match event {
                 OutputEvent::Added(info) => {
                     info!("Output created: {info:?}");
-                    let name = &info.name;
+                    let name = &format!("{} {} {}", info.name, info.make, info.model);
 
                     if let Some((_, h)) = info.logical_size {
                         self.outputs.set_output_logical_height(info.id, h as u32);
