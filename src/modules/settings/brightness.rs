@@ -14,6 +14,9 @@ use iced::{
     widget::{Text, text},
 };
 
+pub const MAX_BRIGHTNESS_STEP: u32 = 5;
+pub const DEFAULT_BRIGHTNESS_STEP: u32 = 5;
+
 #[derive(Debug, Clone)]
 pub enum Message {
     Event(ServiceEvent<BrightnessService>),
@@ -45,14 +48,14 @@ impl BrightnessSettings {
     }
 
     fn step(max: u32) -> u32 {
-        (5 * max / 100).max(1)
+        (DEFAULT_BRIGHTNESS_STEP * max / 100).max(1)
     }
 
-    pub fn brightness_adjust(&mut self, up: bool) -> Action {
+    pub fn brightness_adjust(&mut self, step: u32, up: bool) -> Action {
         let Some((cur, max)) = self.current_brightness() else {
             return Action::None;
         };
-        let step = Self::step(max);
+        let step = (step * max / 100).max(1);
         let new_val = if up {
             (cur + step).min(max)
         } else {

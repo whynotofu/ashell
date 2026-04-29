@@ -179,6 +179,12 @@ ashell msg toggle-airplane-mode
 ashell msg toggle-idle-inhibitor
 ```
 
+Volume, microphone and brightness up/down accept optional `step` parameter in the range of 1 to 5:
+
+```bash
+ashell msg brightness-up 4
+```
+
 The OSD appears at center-bottom and auto-hides after a timeout. To suppress
 it for a specific command, add `--no-osd`:
 

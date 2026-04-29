@@ -21,6 +21,8 @@ use iced::{
 };
 use libpulse_binding::volume::Volume;
 
+pub const MAX_AUDIO_STEP: u32 = 5;
+pub const DEFAULT_AUDIO_STEP: u32 = 5;
 const VOL_PERCENT: u32 = Volume::NORMAL.0 / 100;
 
 #[derive(Debug, Clone)]
@@ -120,11 +122,11 @@ impl AudioSettings {
         Volume::NORMAL.0
     }
 
-    pub fn volume_adjust(&mut self, up: bool) -> Action {
+    pub fn volume_adjust(&mut self, step: u32, up: bool) -> Action {
         let Some(cur) = self.real_sink_volume() else {
             return Action::None;
         };
-        let step = 5 * VOL_PERCENT;
+        let step = step * VOL_PERCENT;
         let new_vol = if up {
             (cur + step).min(Self::vol_max())
         } else {
@@ -171,11 +173,11 @@ impl AudioSettings {
         Volume::NORMAL.0
     }
 
-    pub fn microphone_adjust(&mut self, up: bool) -> Action {
+    pub fn microphone_adjust(&mut self, step: u32, up: bool) -> Action {
         let Some(cur) = self.real_source_volume() else {
             return Action::None;
         };
-        let step = 5 * VOL_PERCENT;
+        let step = step * VOL_PERCENT;
         let new_vol = if up {
             (cur + step).min(Self::mic_max())
         } else {
@@ -533,7 +535,7 @@ impl AudioSettings {
                 ScrollDelta::Lines { y, .. } => y,
                 ScrollDelta::Pixels { y, .. } => y,
             };
-            let step = 5 * VOL_PERCENT;
+            let step = DEFAULT_AUDIO_STEP * VOL_PERCENT;
             let new_volume = if y > 0.0 {
                 (cur_volume + step).min(Volume::NORMAL.0)
             } else {

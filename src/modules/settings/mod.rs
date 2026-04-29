@@ -135,8 +135,8 @@ impl Settings {
         &self.idle_inhibitor
     }
 
-    pub fn volume_adjust(&mut self, up: bool) -> Action {
-        match self.audio.volume_adjust(up) {
+    pub fn volume_adjust(&mut self, step: u32, up: bool) -> Action {
+        match self.audio.volume_adjust(step, up) {
             audio::Action::Task(task) => Action::Command(task.map(Message::Audio)),
             _ => Action::None,
         }
@@ -147,8 +147,8 @@ impl Settings {
         Action::None
     }
 
-    pub fn microphone_adjust(&mut self, up: bool) -> Action {
-        match self.audio.microphone_adjust(up) {
+    pub fn microphone_adjust(&mut self, step: u32, up: bool) -> Action {
+        match self.audio.microphone_adjust(step, up) {
             audio::Action::Task(task) => Action::Command(task.map(Message::Audio)),
             _ => Action::None,
         }
@@ -159,8 +159,8 @@ impl Settings {
         Action::None
     }
 
-    pub fn brightness_adjust(&mut self, up: bool) -> Action {
-        match self.brightness.brightness_adjust(up) {
+    pub fn brightness_adjust(&mut self, step: u32, up: bool) -> Action {
+        match self.brightness.brightness_adjust(step, up) {
             brightness::Action::Command(task) => Action::Command(task.map(Message::Brightness)),
             brightness::Action::None => Action::None,
         }

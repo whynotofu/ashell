@@ -54,6 +54,11 @@ Available commands:
 | `toggle-airplane-mode`   | Toggle airplane mode                 |
 | `toggle-idle-inhibitor`  | Toggle idle inhibitor                |
 
+Volume, microphone and brightness up/down accept optional `step` parameter in the range of 1 to 5:
+
+```bash
+ashell msg brightness-up 4
+```
 
 Volume, microphone, brightness, airplane and idle inhibitor commands show an OSD (On-Screen Display)
 overlay by default. Add `--no-osd` to suppress it:

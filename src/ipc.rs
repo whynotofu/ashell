@@ -13,6 +13,11 @@ use anyhow::{Context, Result, anyhow};
 use clap::Subcommand;
 use iced::Subscription;
 
+use crate::modules::settings::{
+    audio::DEFAULT_AUDIO_STEP, audio::MAX_AUDIO_STEP, brightness::DEFAULT_BRIGHTNESS_STEP,
+    brightness::MAX_BRIGHTNESS_STEP,
+};
+
 /// Maximum bytes to read from a client connection.
 const MAX_REQUEST_LEN: u64 = 4096;
 
@@ -22,10 +27,14 @@ pub enum IpcCommand {
     /// Toggle bar visibility
     ToggleVisibility,
     VolumeUp {
+        #[arg(default_value_t = DEFAULT_AUDIO_STEP)]
+        step: u32,
         #[arg(long)]
         no_osd: bool,
     },
     VolumeDown {
+        #[arg(default_value_t = DEFAULT_AUDIO_STEP)]
+        step: u32,
         #[arg(long)]
         no_osd: bool,
     },
@@ -34,10 +43,14 @@ pub enum IpcCommand {
         no_osd: bool,
     },
     MicrophoneUp {
+        #[arg(default_value_t = DEFAULT_AUDIO_STEP)]
+        step: u32,
         #[arg(long)]
         no_osd: bool,
     },
     MicrophoneDown {
+        #[arg(default_value_t = DEFAULT_AUDIO_STEP)]
+        step: u32,
         #[arg(long)]
         no_osd: bool,
     },
@@ -46,10 +59,14 @@ pub enum IpcCommand {
         no_osd: bool,
     },
     BrightnessUp {
+        #[arg(default_value_t = DEFAULT_BRIGHTNESS_STEP)]
+        step: u32,
         #[arg(long)]
         no_osd: bool,
     },
     BrightnessDown {
+        #[arg(default_value_t = DEFAULT_BRIGHTNESS_STEP)]
+        step: u32,
         #[arg(long)]
         no_osd: bool,
     },
@@ -67,21 +84,41 @@ impl IpcCommand {
     pub fn no_osd(&self) -> bool {
         match self {
             IpcCommand::ToggleVisibility => false,
-            IpcCommand::VolumeUp { no_osd }
-            | IpcCommand::VolumeDown { no_osd }
+            IpcCommand::VolumeUp { no_osd, .. }
+            | IpcCommand::VolumeDown { no_osd, .. }
             | IpcCommand::VolumeToggleMute { no_osd }
-            | IpcCommand::MicrophoneUp { no_osd }
-            | IpcCommand::MicrophoneDown { no_osd }
+            | IpcCommand::MicrophoneUp { no_osd, .. }
+            | IpcCommand::MicrophoneDown { no_osd, .. }
             | IpcCommand::MicrophoneToggleMute { no_osd }
-            | IpcCommand::BrightnessUp { no_osd }
-            | IpcCommand::BrightnessDown { no_osd }
+            | IpcCommand::BrightnessUp { no_osd, .. }
+            | IpcCommand::BrightnessDown { no_osd, .. }
             | IpcCommand::ToggleAirplaneMode { no_osd }
             | IpcCommand::ToggleIdleInhibitor { no_osd } => *no_osd,
         }
     }
+
+    fn parse_step_parameter(s: &str, max: u32, default: u32) -> Option<u32> {
+        if s.is_empty() {
+            return Some(default);
+        }
+        match s.parse::<u32>() {
+            Ok(step) => {
+                if (1..=max).contains(&step) {
+                    Some(step)
+                } else {
+                    None
+                }
+            }
+            Err(_e) => None,
+        }
+    }
+
+    fn invalid_step_parameter_msg(cmd: &str, max: u32) -> String {
+        format!("{cmd} IPC command 'step' parameter must be in the range of 1 to {max}")
+    }
 }
 
-const NO_OSD_SUFFIX: &str = "?no-osd";
+const NO_OSD_SUFFIX: &str = "no-osd";
 
 impl fmt::Display for IpcCommand {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -99,8 +136,17 @@ impl fmt::Display for IpcCommand {
             IpcCommand::ToggleIdleInhibitor { .. } => "toggle-idle-inhibitor",
         };
         write!(f, "{base}")?;
+        match self {
+            IpcCommand::VolumeUp { step, .. }
+            | IpcCommand::VolumeDown { step, .. }
+            | IpcCommand::MicrophoneUp { step, .. }
+            | IpcCommand::MicrophoneDown { step, .. }
+            | IpcCommand::BrightnessUp { step, .. }
+            | IpcCommand::BrightnessDown { step, .. } => write!(f, " {}", step)?,
+            _ => (),
+        }
         if self.no_osd() {
-            write!(f, "{NO_OSD_SUFFIX}")?;
+            write!(f, " {NO_OSD_SUFFIX}")?;
         }
         Ok(())
     }
@@ -110,20 +156,76 @@ impl FromStr for IpcCommand {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let (cmd, no_osd) = match s.strip_suffix(NO_OSD_SUFFIX) {
-            Some(base) => (base, true),
+        let (request, no_osd) = match s.trim().strip_suffix(NO_OSD_SUFFIX) {
+            Some(base) => (base.trim_end(), true),
             None => (s, false),
+        };
+        let (cmd, args) = match request.split_once(' ') {
+            Some((cmd, args)) => (cmd, args.trim_start()),
+            None => (request, ""),
         };
         match cmd {
             "toggle-visibility" => Ok(IpcCommand::ToggleVisibility),
-            "volume-up" => Ok(IpcCommand::VolumeUp { no_osd }),
-            "volume-down" => Ok(IpcCommand::VolumeDown { no_osd }),
+            "volume-up" => {
+                match IpcCommand::parse_step_parameter(args, MAX_AUDIO_STEP, DEFAULT_AUDIO_STEP) {
+                    Some(step) => Ok(IpcCommand::VolumeUp { step, no_osd }),
+                    None => Err(anyhow!(IpcCommand::invalid_step_parameter_msg(
+                        "volume-up",
+                        MAX_AUDIO_STEP
+                    ))),
+                }
+            }
+            "volume-down" => {
+                match IpcCommand::parse_step_parameter(args, MAX_AUDIO_STEP, DEFAULT_AUDIO_STEP) {
+                    Some(step) => Ok(IpcCommand::VolumeDown { step, no_osd }),
+                    None => Err(anyhow!(IpcCommand::invalid_step_parameter_msg(
+                        "volume-down",
+                        MAX_AUDIO_STEP
+                    ))),
+                }
+            }
             "volume-toggle-mute" => Ok(IpcCommand::VolumeToggleMute { no_osd }),
-            "microphone-up" => Ok(IpcCommand::MicrophoneUp { no_osd }),
-            "microphone-down" => Ok(IpcCommand::MicrophoneDown { no_osd }),
+            "microphone-up" => {
+                match IpcCommand::parse_step_parameter(args, MAX_AUDIO_STEP, DEFAULT_AUDIO_STEP) {
+                    Some(step) => Ok(IpcCommand::MicrophoneUp { step, no_osd }),
+                    None => Err(anyhow!(IpcCommand::invalid_step_parameter_msg(
+                        "microphone-up",
+                        MAX_AUDIO_STEP
+                    ))),
+                }
+            }
+            "microphone-down" => {
+                match IpcCommand::parse_step_parameter(args, MAX_AUDIO_STEP, DEFAULT_AUDIO_STEP) {
+                    Some(step) => Ok(IpcCommand::MicrophoneDown { step, no_osd }),
+                    None => Err(anyhow!(IpcCommand::invalid_step_parameter_msg(
+                        "microphone-down",
+                        MAX_AUDIO_STEP
+                    ))),
+                }
+            }
             "microphone-toggle-mute" => Ok(IpcCommand::MicrophoneToggleMute { no_osd }),
-            "brightness-up" => Ok(IpcCommand::BrightnessUp { no_osd }),
-            "brightness-down" => Ok(IpcCommand::BrightnessDown { no_osd }),
+            "brightness-up" => match IpcCommand::parse_step_parameter(
+                args,
+                MAX_BRIGHTNESS_STEP,
+                DEFAULT_BRIGHTNESS_STEP,
+            ) {
+                Some(step) => Ok(IpcCommand::BrightnessUp { step, no_osd }),
+                None => Err(anyhow!(IpcCommand::invalid_step_parameter_msg(
+                    "brightness-up",
+                    MAX_BRIGHTNESS_STEP
+                ))),
+            },
+            "brightness-down" => match IpcCommand::parse_step_parameter(
+                args,
+                MAX_BRIGHTNESS_STEP,
+                DEFAULT_BRIGHTNESS_STEP,
+            ) {
+                Some(step) => Ok(IpcCommand::BrightnessDown { step, no_osd }),
+                None => Err(anyhow!(IpcCommand::invalid_step_parameter_msg(
+                    "brightness-down",
+                    MAX_BRIGHTNESS_STEP
+                ))),
+            },
             "toggle-airplane-mode" => Ok(IpcCommand::ToggleAirplaneMode { no_osd }),
             "toggle-idle-inhibitor" => Ok(IpcCommand::ToggleIdleInhibitor { no_osd }),
             _ => Err(anyhow!("unknown IPC command: {s:?}")),

@@ -548,16 +548,26 @@ impl App {
 
                 // Execute the action via Settings.
                 let action = match &cmd {
-                    IpcCommand::VolumeUp { .. } => self.settings.volume_adjust(true),
-                    IpcCommand::VolumeDown { .. } => self.settings.volume_adjust(false),
+                    IpcCommand::VolumeUp { step, .. } => self.settings.volume_adjust(*step, true),
+                    IpcCommand::VolumeDown { step, .. } => {
+                        self.settings.volume_adjust(*step, false)
+                    }
                     IpcCommand::VolumeToggleMute { .. } => self.settings.toggle_mute(),
-                    IpcCommand::MicrophoneUp { .. } => self.settings.microphone_adjust(true),
-                    IpcCommand::MicrophoneDown { .. } => self.settings.microphone_adjust(false),
+                    IpcCommand::MicrophoneUp { step, .. } => {
+                        self.settings.microphone_adjust(*step, true)
+                    }
+                    IpcCommand::MicrophoneDown { step, .. } => {
+                        self.settings.microphone_adjust(*step, false)
+                    }
                     IpcCommand::MicrophoneToggleMute { .. } => {
                         self.settings.microphone_toggle_mute()
                     }
-                    IpcCommand::BrightnessUp { .. } => self.settings.brightness_adjust(true),
-                    IpcCommand::BrightnessDown { .. } => self.settings.brightness_adjust(false),
+                    IpcCommand::BrightnessUp { step, .. } => {
+                        self.settings.brightness_adjust(*step, true)
+                    }
+                    IpcCommand::BrightnessDown { step, .. } => {
+                        self.settings.brightness_adjust(*step, false)
+                    }
                     IpcCommand::ToggleAirplaneMode { .. } => self.settings.toggle_airplane(),
                     IpcCommand::ToggleIdleInhibitor { .. } => self.settings.toggle_idle_inhibitor(),
                     IpcCommand::ToggleVisibility => unreachable!(),

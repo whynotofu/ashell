@@ -94,6 +94,8 @@ ashell msg toggle-airplane-mode
 ashell msg toggle-idle-inhibitor
 ```
 
+Volume, microphone and brightness up/down accept optional `step` parameter in the range of 1 to 5.
+
 Volume, microphone, brightness, airplane and idle inhibitor commands show an OSD overlay. Add `--no-osd` to suppress it.
 
 ## Signal Handling
