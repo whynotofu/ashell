@@ -44,6 +44,7 @@ impl UnitSystem {
 
 pub struct Localizer {
     pub chrono: Locale,
+    units: UnitSystem,
     loader: FluentLanguageLoader,
 }
 
@@ -56,6 +57,7 @@ impl Default for Localizer {
         let loader = FluentLanguageLoader::new("ashell", en_us_langid());
         Self {
             chrono: FALLBACK_CHRONO,
+            units: derive_units(FALLBACK_CHRONO),
             loader,
         }
     }
@@ -65,12 +67,17 @@ impl Localizer {
     pub fn resolve(language: Option<&str>, region: Option<&str>) -> Self {
         let langid = resolve_language(language);
         let chrono = resolve_region(region);
+        let units = resolve_units(chrono);
         let loader = load_loader(&langid);
-        Self { chrono, loader }
+        Self {
+            chrono,
+            units,
+            loader,
+        }
     }
 
     pub fn units(&self) -> UnitSystem {
-        derive_units(self.chrono)
+        self.units
     }
 
     pub fn loader(&self) -> &FluentLanguageLoader {
@@ -136,8 +143,28 @@ fn env_chain(config: Option<&str>, category_var: &str) -> Option<String> {
 }
 
 fn derive_units(c: Locale) -> UnitSystem {
+    // `en_LR` omitted: not a chrono Locale variant.
     match c {
-        Locale::en_US => UnitSystem::Imperial,
+        Locale::en_US | Locale::my_MM => UnitSystem::Imperial,
+        _ => UnitSystem::Metric,
+    }
+}
+
+// `LC_MEASUREMENT` is independent from `LC_TIME` in glibc, so users with
+// `LANG=en_US.UTF-8` + `LC_MEASUREMENT=de_DE.UTF-8` get metric without
+// having to override their date-format locale.
+fn resolve_units(chrono: Locale) -> UnitSystem {
+    env_chain(None, "LC_MEASUREMENT")
+        .as_deref()
+        .map(units_from_locale_name)
+        .unwrap_or_else(|| derive_units(chrono))
+}
+
+fn units_from_locale_name(s: &str) -> UnitSystem {
+    let posix = normalize_to_posix(s);
+    let base = posix.split_once('@').map_or(posix.as_str(), |(b, _)| b);
+    match base {
+        "en_US" | "en_LR" | "my_MM" => UnitSystem::Imperial,
         _ => UnitSystem::Metric,
     }
 }
