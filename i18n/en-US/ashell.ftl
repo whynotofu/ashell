@@ -88,7 +88,7 @@ settings-power-profile-power-saver = Power Saver
 settings-idle-inhibitor = Idle Inhibitor
 
 ## Tempo / weather module
-tempo-feels-like = Feels like { $temp }
+tempo-feels-like = Feels like { $value }{ $unit }
 tempo-humidity = Humidity
 tempo-wind = Wind
 

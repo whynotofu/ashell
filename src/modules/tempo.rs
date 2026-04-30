@@ -489,8 +489,8 @@ impl Tempo {
                                     text(format!("{}{temp}", data.current.temperature_2m)),
                                     text(t!(
                                         "tempo-feels-like",
-                                        temp =
-                                            format!("{}{temp}", data.current.apparent_temperature)
+                                        value = data.current.apparent_temperature,
+                                        unit = temp,
                                     ))
                                     .size(font_size.sm)
                                 )
