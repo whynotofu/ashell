@@ -24,7 +24,8 @@ media-player-unknown-album = Unknown Album
 ## Password / network connection dialog
 password-dialog-open-network-title = Open network
 password-dialog-authentication-required-title = Authentication required
-password-dialog-open-network-warning = "{ $ssid }" is an open network. Data sent over this connection may be visible to others.
+password-dialog-open-network-warning =
+    "{ $ssid }" is an open network. Data sent over this connection may be visible to others.
     Do you want to connect anyway?
 password-dialog-insert-password = Insert password to connect to: { $ssid }
 password-dialog-cancel = Cancel
