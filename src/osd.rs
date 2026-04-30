@@ -12,6 +12,7 @@ use crate::{
     modules::settings::audio::AudioSettings,
     modules::settings::network::NetworkSettings,
     services::idle_inhibitor::IdleInhibitorManager,
+    t,
     theme::use_theme,
 };
 
@@ -133,16 +134,14 @@ impl Osd {
                 container(bar).center_x(Length::Fill).into()
             }
             OsdKind::Airplane | OsdKind::IdleInhibitor => {
-                let subject = match state.kind {
-                    OsdKind::Airplane => "Airplane mode",
-                    OsdKind::IdleInhibitor => "Idle inhibitor",
-                    _ => "",
-                };
                 // For toggles, `muted` carries the active/enabled state.
-                let state = if state.muted { "on" } else { "off" };
-                container(text(format!("{subject} turned {state}")))
-                    .center_x(Length::Fill)
-                    .into()
+                let state_key = if state.muted { "on" } else { "off" };
+                let label = match state.kind {
+                    OsdKind::Airplane => t!("osd-airplane-toggle", state = state_key),
+                    OsdKind::IdleInhibitor => t!("osd-idle-inhibitor-toggle", state = state_key),
+                    _ => unreachable!(),
+                };
+                container(text(label)).center_x(Length::Fill).into()
             }
         };
 

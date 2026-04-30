@@ -30,3 +30,15 @@ password-dialog-open-network-warning =
 password-dialog-insert-password = Insert password to connect to: { $ssid }
 password-dialog-cancel = Cancel
 password-dialog-confirm = Confirm
+
+## OSD
+osd-airplane-toggle =
+    { $state ->
+        [on] Airplane mode turned on
+       *[off] Airplane mode turned off
+    }
+osd-idle-inhibitor-toggle =
+    { $state ->
+        [on] Idle inhibitor turned on
+       *[off] Idle inhibitor turned off
+    }
