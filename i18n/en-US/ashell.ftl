@@ -122,3 +122,7 @@ weather-thunderstorm = Slight or moderate thunderstorm
 weather-thunderstorm-hail-slight = Thunderstorm with slight hail
 weather-thunderstorm-hail-heavy = Thunderstorm with heavy hail
 weather-unknown = Unknown weather condition
+
+## Notifications module
+notifications-heading = Notifications
+notifications-empty = No notifications

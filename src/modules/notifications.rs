@@ -9,6 +9,7 @@ use crate::{
             dbus::{NotificationDaemon, NotificationEvent},
         },
     },
+    t,
     theme::use_theme,
 };
 use chrono::{DateTime, Local};
@@ -575,7 +576,7 @@ impl Notifications {
         let is_empty = self.notifications.is_empty();
 
         let content = if is_empty {
-            container(text("No notifications").size(font_size.md))
+            container(text(t!("notifications-empty")).size(font_size.md))
                 .width(Length::Fill)
                 .center_x(Length::Fill)
                 .padding(space.xxl)
@@ -588,7 +589,11 @@ impl Notifications {
 
         column!(
             Row::new()
-                .push(text("Notifications").width(Length::Fill).size(font_size.lg))
+                .push(
+                    text(t!("notifications-heading"))
+                        .width(Length::Fill)
+                        .size(font_size.lg)
+                )
                 .push((!is_empty).then(|| {
                     icon_button(StaticIcon::Delete).on_press(Message::ClearNotifications)
                 })),
