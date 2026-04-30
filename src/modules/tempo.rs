@@ -5,7 +5,8 @@ use crate::{
         styled_button,
     },
     config::{TempoModuleConfig, WeatherIndicator, WeatherLocation},
-    i18n::{UnitSystem, chrono_locale, unit_system},
+    i18n::{UnitSystem, chrono_locale, language_subtag, unit_system},
+    t,
     theme::{AshellTheme, use_theme},
 };
 use chrono::{
@@ -486,9 +487,10 @@ impl Tempo {
                                 text(weather_description(data.current.weather_code)),
                                 row!(
                                     text(format!("{}{temp}", data.current.temperature_2m)),
-                                    text(format!(
-                                        "Feels like {}{temp}",
-                                        data.current.apparent_temperature
+                                    text(t!(
+                                        "tempo-feels-like",
+                                        temp =
+                                            format!("{}{temp}", data.current.apparent_temperature)
                                     ))
                                     .size(font_size.sm)
                                 )
@@ -505,7 +507,7 @@ impl Tempo {
                                     .width(Length::Shrink)
                                     .height(font_size.lg),
                                     column!(
-                                        text("Humidity")
+                                        text(t!("tempo-humidity"))
                                             .size(font_size.xs)
                                             .align_x(Horizontal::Right)
                                             .width(Length::Fill),
@@ -531,7 +533,7 @@ impl Tempo {
                                         )
                                     ),
                                     column!(
-                                        text("Wind")
+                                        text(t!("tempo-wind"))
                                             .size(font_size.xs)
                                             .align_x(Horizontal::Right)
                                             .width(Length::Fill),
@@ -755,15 +757,16 @@ impl Tempo {
         });
 
         let weather_sub = self.config.weather_location.clone().map(|location| {
-            let key = (location, unit_system());
-            Subscription::run_with(key, |(location, units)| {
+            let key = (location, unit_system(), language_subtag());
+            Subscription::run_with(key, |(location, units, lang)| {
                 let location = location.clone();
                 let units = *units;
+                let lang = lang.clone();
                 channel(100, async move |mut output| {
                     let mut failed_attempt: u64 = 0;
 
                     loop {
-                        let loc = match fetch_location(&location).await {
+                        let loc = match fetch_location(&location, &lang).await {
                             Ok(loc) => {
                                 debug!("Location fetched successfully: {:?}", loc);
                                 let (lat, lon) = (loc.latitude, loc.longitude);
@@ -810,7 +813,7 @@ impl Tempo {
     }
 }
 
-async fn fetch_location(location: &WeatherLocation) -> anyhow::Result<Location> {
+async fn fetch_location(location: &WeatherLocation, lang: &str) -> anyhow::Result<Location> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(20))
         .build()?;
@@ -818,8 +821,8 @@ async fn fetch_location(location: &WeatherLocation) -> anyhow::Result<Location> 
     match location {
         WeatherLocation::City(city) => {
             let url = format!(
-                "https://geocoding-api.open-meteo.com/v1/search?name={}&count=1&language=en&format=json",
-                city
+                "https://geocoding-api.open-meteo.com/v1/search?name={}&count=1&language={}&format=json",
+                city, lang
             );
             let response = client.get(&url).send().await?;
             let raw_data = response.text().await?;
@@ -843,7 +846,7 @@ async fn fetch_location(location: &WeatherLocation) -> anyhow::Result<Location> 
             Ok(data.into())
         }
         WeatherLocation::Coordinates(lat, lon) => {
-            let (city, region_name) = match try_reverse_geocode(&client, *lat, *lon).await {
+            let (city, region_name) = match try_reverse_geocode(&client, *lat, *lon, lang).await {
                 Ok(Some((city, region))) => (city, region),
                 _ => (format!("Lat: {}, Lon: {}", lat, lon), String::new()),
             };
@@ -862,10 +865,11 @@ async fn try_reverse_geocode(
     client: &reqwest::Client,
     lat: f32,
     lon: f32,
+    lang: &str,
 ) -> anyhow::Result<Option<(String, String)>> {
     let url = format!(
-        "https://nominatim.openstreetmap.org/reverse?format=json&lat={}&lon={}&accept-language=en",
-        lat, lon
+        "https://nominatim.openstreetmap.org/reverse?format=json&lat={}&lon={}&accept-language={}",
+        lat, lon, lang
     );
 
     // Nominatim requires a custom User-Agent header per their usage policy
@@ -1201,36 +1205,36 @@ pub fn weather_icon<'a>(code: u32, is_day: bool) -> Svg<'a> {
     }
 }
 
-pub const fn weather_description(code: u32) -> &'static str {
+pub fn weather_description(code: u32) -> String {
     match code {
-        0 => "Clear sky",
-        1 => "Mainly clear",
-        2 => "Partly cloudy",
-        3 => "Overcast",
-        45 => "Fog",
-        48 => "Depositing rime fog",
-        51 => "Light drizzle",
-        53 => "Moderate drizzle",
-        55 => "Dense intensity drizzle",
-        56 => "Light freezing drizzle",
-        57 => "Dense intensity freezing drizzle",
-        61 => "Slight rain",
-        63 => "Moderate rain",
-        65 => "Heavy intensity rain",
-        66 => "Light freezing rain",
-        67 => "Heavy intensity freezing rain",
-        71 => "Slight snow fall",
-        73 => "Moderate snow fall",
-        75 => "Heavy intensity snow fall",
-        77 => "Snow grains",
-        80 => "Slight rain showers",
-        81 => "Moderate rain showers",
-        82 => "Violent rain showers",
-        85 => "Slight snow showers",
-        86 => "Heavy snow showers",
-        95 => "Slight or moderate thunderstorm",
-        96 => "Thunderstorm with slight hail",
-        99 => "Thunderstorm with heavy hail",
-        _ => "Unknown weather condition",
+        0 => t!("weather-clear-sky"),
+        1 => t!("weather-mainly-clear"),
+        2 => t!("weather-partly-cloudy"),
+        3 => t!("weather-overcast"),
+        45 => t!("weather-fog"),
+        48 => t!("weather-fog-rime"),
+        51 => t!("weather-drizzle-light"),
+        53 => t!("weather-drizzle-moderate"),
+        55 => t!("weather-drizzle-dense"),
+        56 => t!("weather-drizzle-freezing-light"),
+        57 => t!("weather-drizzle-freezing-dense"),
+        61 => t!("weather-rain-slight"),
+        63 => t!("weather-rain-moderate"),
+        65 => t!("weather-rain-heavy"),
+        66 => t!("weather-rain-freezing-light"),
+        67 => t!("weather-rain-freezing-heavy"),
+        71 => t!("weather-snow-slight"),
+        73 => t!("weather-snow-moderate"),
+        75 => t!("weather-snow-heavy"),
+        77 => t!("weather-snow-grains"),
+        80 => t!("weather-rain-showers-slight"),
+        81 => t!("weather-rain-showers-moderate"),
+        82 => t!("weather-rain-showers-violent"),
+        85 => t!("weather-snow-showers-slight"),
+        86 => t!("weather-snow-showers-heavy"),
+        95 => t!("weather-thunderstorm"),
+        96 => t!("weather-thunderstorm-hail-slight"),
+        99 => t!("weather-thunderstorm-hail-heavy"),
+        _ => t!("weather-unknown"),
     }
 }
