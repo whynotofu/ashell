@@ -57,6 +57,7 @@ pub struct AudioSettingsConfig {
     pub sources_more_cmd: Option<String>,
     pub indicator_format: SettingsFormat,
     pub microphone_indicator_format: SettingsFormat,
+    pub step: u32,
 }
 
 impl AudioSettingsConfig {
@@ -65,12 +66,14 @@ impl AudioSettingsConfig {
         sources_more_cmd: Option<String>,
         indicator_format: SettingsFormat,
         microphone_indicator_format: SettingsFormat,
+        step: u32,
     ) -> Self {
         Self {
             sinks_more_cmd,
             sources_more_cmd,
             indicator_format,
             microphone_indicator_format,
+            step,
         }
     }
 }
@@ -125,7 +128,7 @@ impl AudioSettings {
         let Some(cur) = self.real_sink_volume() else {
             return Action::None;
         };
-        let step = 5 * VOL_PERCENT;
+        let step = self.config.step * VOL_PERCENT;
         let new_vol = if up {
             (cur + step).min(Self::vol_max())
         } else {
@@ -176,7 +179,7 @@ impl AudioSettings {
         let Some(cur) = self.real_source_volume() else {
             return Action::None;
         };
-        let step = 5 * VOL_PERCENT;
+        let step = self.config.step * VOL_PERCENT;
         let new_vol = if up {
             (cur + step).min(Self::mic_max())
         } else {
@@ -331,7 +334,11 @@ impl AudioSettings {
                     IndicatorState::Normal,
                 )
                 .on_right_press(Message::OpenMore)
-                .on_scroll(Self::on_scroll(volume, Message::SinkVolumeChanged))
+                .on_scroll(Self::on_scroll(
+                    volume,
+                    self.config.step,
+                    Message::SinkVolumeChanged,
+                ))
                 .into()
             })
     }
@@ -353,7 +360,11 @@ impl AudioSettings {
                     IndicatorState::Normal,
                 )
                 .on_right_press(Message::OpenSourceMore)
-                .on_scroll(Self::on_scroll(volume, Message::SourceVolumeChanged))
+                .on_scroll(Self::on_scroll(
+                    volume,
+                    self.config.step,
+                    Message::SourceVolumeChanged,
+                ))
                 .into()
             })
     }
@@ -369,6 +380,7 @@ impl AudioSettings {
                     s.is_mute,
                     Message::ToggleSinkMute,
                     &service.sink_slider,
+                    self.config.step,
                     &Message::SinkVolumeChanged,
                     if service.has_multiple_sinks() {
                         Some((sub_menu, Message::ToggleSinksMenu))
@@ -384,6 +396,7 @@ impl AudioSettings {
                     s.is_mute,
                     Message::ToggleSourceMute,
                     &service.source_slider,
+                    self.config.step,
                     &Message::SourceVolumeChanged,
                     if service.has_multiple_sources() {
                         Some((sub_menu, Message::ToggleSourcesMenu))
@@ -486,6 +499,7 @@ impl AudioSettings {
         is_mute: bool,
         toggle_mute: Message,
         volume: &'a Remote<u32>,
+        step: u32,
         volume_changed: &'a dyn Fn(remote_value::Message<u32>) -> Message,
         with_submenu: Option<(Option<SubMenu>, Message)>,
     ) -> Element<'a, Message> {
@@ -506,7 +520,7 @@ impl AudioSettings {
             Volume::MUTED.0..=Volume::NORMAL.0,
             volume.value(),
             volume_changed,
-            Self::on_scroll(volume.value(), volume_changed),
+            Self::on_scroll(volume.value(), step, volume_changed),
         )
         .on_icon_press(toggle_mute)
         .on_icon_right_press(match slider_type {
@@ -525,7 +539,7 @@ impl AudioSettings {
         ctrl.into()
     }
 
-    fn on_scroll<F>(cur_volume: u32, make_msg: F) -> impl Fn(ScrollDelta) -> Message
+    fn on_scroll<F>(cur_volume: u32, step: u32, make_msg: F) -> impl Fn(ScrollDelta) -> Message
     where
         F: Fn(remote_value::Message<u32>) -> Message,
     {
@@ -534,7 +548,7 @@ impl AudioSettings {
                 ScrollDelta::Lines { y, .. } => y,
                 ScrollDelta::Pixels { y, .. } => y,
             };
-            let step = 5 * VOL_PERCENT;
+            let step = step * VOL_PERCENT;
             let new_volume = if y > 0.0 {
                 (cur_volume + step).min(Volume::NORMAL.0)
             } else {
