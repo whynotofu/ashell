@@ -15,7 +15,7 @@ use crate::{
         privacy::Privacy,
         settings::{self, Settings, audio},
         system_info::SystemInfo,
-        tempo::Tempo,
+        tempo::{self, Tempo},
         tray::TrayModule,
         updates::Updates,
         window_title::WindowTitle,
@@ -352,6 +352,9 @@ impl App {
                     MenuType::Tray(name) => {
                         self.tray
                             .update(modules::tray::Message::MenuOpened(name.clone()));
+                    }
+                    MenuType::Tempo => {
+                        self.tempo.update(tempo::Message::ShowToday);
                     }
                     MenuType::Settings => {
                         cmd.push(
