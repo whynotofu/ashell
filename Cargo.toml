@@ -57,8 +57,6 @@ hex_color = { version = "3", features = ["serde"] }
 anyhow = "1"
 udev = { version = "0.9", features = ["send", "sync"] }
 toml = "0.9"
-freedesktop-icons = "0.4"
-linicon-theme = "1.2.0"
 serde_json = "1"
 regex = "1.12.2"
 serde_with = { version = "3.12", default-features = false, features = [
@@ -75,9 +73,6 @@ inotify = { version = "0.11.1", default-features = false, features = [
 ] }
 pin-project-lite = "0.2.16"
 niri-ipc = "25.11.0"
-url = "2.5.7"
-signal-hook = "0.4.3"
-signal-hook-tokio = { version = "0.4", features = ["futures-v0_3"] }
 libc = "0.2.182"
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client"] }
@@ -87,7 +82,6 @@ i18n-embed = { version = "0.16", default-features = false, features = [
   "rust-embed",
 ] }
 i18n-embed-fl = "0.10"
-rust-embed = "8"
 unic-langid = "0.9"
 
 [patch.crates-io]
