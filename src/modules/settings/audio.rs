@@ -17,7 +17,7 @@ use crate::{
     utils::remote_value::{self, Remote},
 };
 use iced::{
-    Alignment, Element, Length, Subscription, SurfaceId, Task, Theme,
+    Alignment, Element, Length, Subscription, Task, Theme,
     mouse::ScrollDelta,
     widget::{Column, Text, column, container, row, text},
 };
@@ -34,10 +34,6 @@ pub enum Message {
     SinkVolumeChanged(remote_value::Message<u32>, bool),
     ToggleSourceMute(bool),
     SourceVolumeChanged(remote_value::Message<u32>, bool),
-    SinksMore(SurfaceId),
-    SourcesMore(SurfaceId),
-    OpenMore,
-    OpenSourceMore,
     ToggleSinksMenu,
     ToggleSourcesMenu,
     ConfigReloaded(AudioSettingsConfig),
@@ -48,34 +44,17 @@ pub enum Action {
     Response(Option<Task<Message>>, Option<osd::OsdMessage>),
     ToggleSinksMenu,
     ToggleSourcesMenu,
-    CloseMenu(SurfaceId),
     CloseSubMenu,
 }
 
 #[derive(Debug, Clone)]
 pub struct AudioSettingsConfig {
-    pub sinks_more_cmd: Option<String>,
-    pub sources_more_cmd: Option<String>,
-    pub indicator_format: SettingsFormat,
-    pub microphone_indicator_format: SettingsFormat,
     pub step: u32,
 }
 
 impl AudioSettingsConfig {
-    pub fn new(
-        sinks_more_cmd: Option<String>,
-        sources_more_cmd: Option<String>,
-        indicator_format: SettingsFormat,
-        microphone_indicator_format: SettingsFormat,
-        step: u32,
-    ) -> Self {
-        Self {
-            sinks_more_cmd,
-            sources_more_cmd,
-            indicator_format,
-            microphone_indicator_format,
-            step,
-        }
+    pub fn new(step: u32) -> Self {
+        Self { step }
     }
 }
 
@@ -297,34 +276,6 @@ impl AudioSettings {
                 }
                 Action::None
             }
-            Message::OpenMore => {
-                if let Some(cmd) = &self.config.sinks_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.to_string());
-                }
-                Action::None
-            }
-            Message::OpenSourceMore => {
-                if let Some(cmd) = &self.config.sources_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.to_string());
-                }
-                Action::None
-            }
-            Message::SinksMore(id) => {
-                if let Some(cmd) = &self.config.sinks_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.to_string());
-                    Action::CloseMenu(id)
-                } else {
-                    Action::None
-                }
-            }
-            Message::SourcesMore(id) => {
-                if let Some(cmd) = &self.config.sources_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.to_string());
-                    Action::CloseMenu(id)
-                } else {
-                    Action::None
-                }
-            }
             Message::ToggleSinksMenu => Action::ToggleSinksMenu,
             Message::ToggleSourcesMenu => Action::ToggleSourcesMenu,
             Message::ConfigReloaded(config) => {
@@ -347,15 +298,12 @@ impl AudioSettings {
             .map(|(service, icon_type)| {
                 let volume = service.sink_slider.value();
                 format_indicator(
-                    self.config.indicator_format,
+                    SettingsFormat::Icon,
                     icon_type,
                     Self::vol_text(volume).into(),
                     IndicatorState::Normal,
                 )
-                .on_right_press(match self.config.sinks_more_cmd {
-                    Some(_) => Message::OpenSourceMore,
-                    None => Message::ToggleSinkMute(true),
-                })
+                .on_right_press(Message::ToggleSinkMute(true))
                 .on_scroll(Self::on_scroll(volume, Message::SinkVolumeChanged, true))
                 .into()
             })
@@ -372,15 +320,12 @@ impl AudioSettings {
             .map(|(service, icon_type)| {
                 let volume = service.source_slider.value();
                 format_indicator(
-                    self.config.microphone_indicator_format,
+                    SettingsFormat::Icon,
                     icon_type,
                     Self::vol_text(volume).into(),
                     IndicatorState::Normal,
                 )
-                .on_right_press(match self.config.sinks_more_cmd {
-                    Some(_) => Message::OpenMore,
-                    None => Message::ToggleSourceMute(true),
-                })
+                .on_right_press(Message::ToggleSourceMute(true))
                 .on_scroll(Self::on_scroll(volume, Message::SourceVolumeChanged, true))
                 .into()
             })
@@ -427,7 +372,7 @@ impl AudioSettings {
         }
     }
 
-    pub fn sinks_submenu<'a>(&'a self, id: SurfaceId) -> Option<Element<'a, Message>> {
+    pub fn sinks_submenu<'a>(&'a self) -> Option<Element<'a, Message>> {
         self.service.as_ref().map(|service| {
             Self::submenu(
                 service
@@ -445,16 +390,12 @@ impl AudioSettings {
                         ),
                     })
                     .collect(),
-                if self.config.sinks_more_cmd.is_some() {
-                    Some(Message::SinksMore(id))
-                } else {
-                    None
-                },
+                None,
             )
         })
     }
 
-    pub fn sources_submenu<'a>(&'a self, id: SurfaceId) -> Option<Element<'a, Message>> {
+    pub fn sources_submenu<'a>(&'a self) -> Option<Element<'a, Message>> {
         self.service.as_ref().map(|service| {
             Self::submenu(
                 service
@@ -472,11 +413,7 @@ impl AudioSettings {
                         ),
                     })
                     .collect(),
-                if self.config.sources_more_cmd.is_some() {
-                    Some(Message::SourcesMore(id))
-                } else {
-                    None
-                },
+                None,
             )
         })
     }
@@ -536,11 +473,7 @@ impl AudioSettings {
             volume_changed,
             Self::on_scroll(volume.value(), volume_changed, false),
         )
-        .on_icon_press(toggle_mute)
-        .on_icon_right_press(match slider_type {
-            SliderType::Sink => Message::OpenMore,
-            SliderType::Source => Message::OpenSourceMore,
-        });
+        .on_icon_press(toggle_mute);
 
         if let Some((submenu, msg)) = with_submenu {
             let expanded = match slider_type {

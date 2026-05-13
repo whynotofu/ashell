@@ -49,15 +49,11 @@ pub enum Action {
 #[derive(Debug, Clone)]
 pub struct BluetoothSettingsConfig {
     pub more_cmd: Option<String>,
-    pub indicator_format: SettingsFormat,
 }
 
 impl BluetoothSettingsConfig {
-    pub fn new(more_cmd: Option<String>, indicator_format: SettingsFormat) -> Self {
-        Self {
-            more_cmd,
-            indicator_format,
-        }
+    pub fn new(more_cmd: Option<String>) -> Self {
+        Self { more_cmd }
     }
 }
 
@@ -420,7 +416,7 @@ impl BluetoothSettings {
             if connected_count > 0 {
                 Some(
                     format_indicator(
-                        self.config.indicator_format,
+                        SettingsFormat::Icon,
                         StaticIcon::BluetoothConnected,
                         text(format!("{}", connected_count)).into(),
                         IndicatorState::Normal,

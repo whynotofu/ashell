@@ -496,19 +496,11 @@ pub struct SettingsModuleConfig {
     pub peripheral_indicators: PeripheralIndicators,
     pub peripheral_battery_format: SettingsFormat,
     pub peripheral_expanded_by_default: bool,
-    pub audio_indicator_format: SettingsFormat,
-    pub microphone_indicator_format: SettingsFormat,
     #[serde(deserialize_with = "step_deserializer")]
     pub audio_step: u32,
     pub network_indicator_format: SettingsFormat,
-    pub bluetooth_indicator_format: SettingsFormat,
-    pub brightness_indicator_format: SettingsFormat,
     #[serde(deserialize_with = "step_deserializer")]
     pub brightness_step: u32,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub audio_sinks_more_cmd: Option<String>,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub audio_sources_more_cmd: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub wifi_more_cmd: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
@@ -555,15 +547,9 @@ impl Default for SettingsModuleConfig {
             peripheral_indicators: Default::default(),
             peripheral_battery_format: SettingsFormat::Icon,
             peripheral_expanded_by_default: false,
-            audio_indicator_format: SettingsFormat::Icon,
-            microphone_indicator_format: SettingsFormat::Icon,
             audio_step: 5,
             network_indicator_format: SettingsFormat::Icon,
-            bluetooth_indicator_format: SettingsFormat::Icon,
-            brightness_indicator_format: SettingsFormat::Icon,
             brightness_step: 5,
-            audio_sinks_more_cmd: Default::default(),
-            audio_sources_more_cmd: Default::default(),
             wifi_more_cmd: Default::default(),
             vpn_more_cmd: Default::default(),
             bluetooth_more_cmd: Default::default(),

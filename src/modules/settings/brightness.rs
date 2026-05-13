@@ -29,16 +29,12 @@ pub enum Action {
 
 #[derive(Debug, Clone)]
 pub struct BrightnessSettingsConfig {
-    pub indicator_format: SettingsFormat,
     pub step: u32,
 }
 
 impl BrightnessSettingsConfig {
-    pub fn new(indicator_format: SettingsFormat, step: u32) -> Self {
-        Self {
-            indicator_format,
-            step,
-        }
+    pub fn new(step: u32) -> Self {
+        Self { step }
     }
 }
 
@@ -159,7 +155,7 @@ impl BrightnessSettings {
             let scroll_handler = Self::on_scroll(service.current.value(), service.max, true);
 
             format_indicator(
-                self.config.indicator_format,
+                SettingsFormat::Icon,
                 StaticIcon::Brightness,
                 Self::percent_text(service).into(),
                 IndicatorState::Normal,

@@ -197,15 +197,8 @@ impl Settings {
                 config.peripheral_battery_format,
                 config.peripheral_expanded_by_default,
             )),
-            audio: AudioSettings::new(AudioSettingsConfig::new(
-                config.audio_sinks_more_cmd,
-                config.audio_sources_more_cmd,
-                config.audio_indicator_format,
-                config.microphone_indicator_format,
-                config.audio_step,
-            )),
+            audio: AudioSettings::new(AudioSettingsConfig::new(config.audio_step)),
             brightness: BrightnessSettings::new(BrightnessSettingsConfig::new(
-                config.brightness_indicator_format,
                 config.brightness_step,
             )),
             network: NetworkSettings::new(NetworkSettingsConfig::new(
@@ -216,7 +209,6 @@ impl Settings {
             )),
             bluetooth: BluetoothSettings::new(BluetoothSettingsConfig::new(
                 config.bluetooth_more_cmd,
-                config.bluetooth_indicator_format,
             )),
             idle_inhibitor: if config.remove_idle_btn {
                 None
@@ -270,7 +262,6 @@ impl Settings {
                     }
                     Action::None
                 }
-                audio::Action::CloseMenu(id) => Action::CloseMenu(id),
                 audio::Action::Response(task, osd) => match task {
                     Some(task) => Action::Response(Some(task.map(Message::Audio)), osd),
                     None => Action::Response(None, osd),
@@ -452,10 +443,6 @@ impl Settings {
                     )));
                 self.audio
                     .update(audio::Message::ConfigReloaded(AudioSettingsConfig::new(
-                        config.audio_sinks_more_cmd,
-                        config.audio_sources_more_cmd,
-                        config.audio_indicator_format,
-                        config.microphone_indicator_format,
                         config.audio_step,
                     )));
                 self.network.update(network::Message::ConfigReloaded(
@@ -467,16 +454,10 @@ impl Settings {
                     ),
                 ));
                 self.bluetooth.update(bluetooth::Message::ConfigReloaded(
-                    BluetoothSettingsConfig::new(
-                        config.bluetooth_more_cmd,
-                        config.bluetooth_indicator_format,
-                    ),
+                    BluetoothSettingsConfig::new(config.bluetooth_more_cmd),
                 ));
                 self.brightness.update(brightness::Message::ConfigReloaded(
-                    BrightnessSettingsConfig::new(
-                        config.brightness_indicator_format,
-                        config.brightness_step,
-                    ),
+                    BrightnessSettingsConfig::new(config.brightness_step),
                 ));
                 if config.remove_idle_btn {
                     self.idle_inhibitor = None;
@@ -620,7 +601,7 @@ impl Settings {
                         .filter(|menu_type| *menu_type == SubMenu::Sinks)
                         .and_then(|_| {
                             self.audio
-                                .sinks_submenu(id)
+                                .sinks_submenu()
                                 .map(|submenu| sub_menu_wrapper(submenu.map(Message::Audio)))
                         }),
                 )
@@ -631,7 +612,7 @@ impl Settings {
                         .filter(|menu_type| *menu_type == SubMenu::Sources)
                         .and_then(|_| {
                             self.audio
-                                .sources_submenu(id)
+                                .sources_submenu()
                                 .map(|submenu| sub_menu_wrapper(submenu.map(Message::Audio)))
                         }),
                 )
