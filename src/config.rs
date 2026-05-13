@@ -39,7 +39,6 @@ pub struct Config {
     pub settings: SettingsModuleConfig,
     pub appearance: Appearance,
     pub keyboard_layout: KeyboardLayoutModuleConfig,
-    pub animations: AnimationsConfig,
     pub osd: OsdConfig,
 }
 
@@ -62,16 +61,9 @@ impl Default for Config {
             settings: SettingsModuleConfig::default(),
             appearance: Appearance::default(),
             keyboard_layout: KeyboardLayoutModuleConfig::default(),
-            animations: AnimationsConfig::default(),
             osd: OsdConfig::default(),
         }
     }
-}
-
-#[derive(Deserialize, Clone, Debug, Default)]
-#[serde(default)]
-pub struct AnimationsConfig {
-    pub enabled: bool,
 }
 
 impl Config {

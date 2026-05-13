@@ -98,11 +98,7 @@ impl App {
                 config.appearance.scale_factor,
             );
 
-            init_theme(AshellTheme::new(
-                config.position,
-                &config.appearance,
-                &config.animations,
-            ));
+            init_theme(AshellTheme::new(config.position, &config.appearance));
             init_localizer(resolve_localizer(&config));
 
             (
@@ -133,11 +129,7 @@ impl App {
     }
 
     fn refresh_config(&mut self, config: Box<Config>) {
-        init_theme(AshellTheme::new(
-            config.position,
-            &config.appearance,
-            &config.animations,
-        ));
+        init_theme(AshellTheme::new(config.position, &config.appearance));
         init_localizer(resolve_localizer(&config));
         self.general_config = GeneralConfig {
             outputs: config.outputs,

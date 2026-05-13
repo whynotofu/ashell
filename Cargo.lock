@@ -148,7 +148,6 @@ dependencies = [
  "hyprland",
  "i18n-embed",
  "i18n-embed-fl",
- "iced_anim",
  "iced_layershell",
  "inotify",
  "itertools 0.14.0",
@@ -1658,15 +1657,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f31827a206f56af32e590ba56d5d2d085f558508192593743f16b2306495269f"
 dependencies = [
  "cc",
-]
-
-[[package]]
-name = "iced_anim"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea7e0f5f848b041abf2907eda96a4c21cbd5c3aee4ade434bd650d898f39e95b"
-dependencies = [
- "iced_core",
 ]
 
 [[package]]

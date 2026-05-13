@@ -1,6 +1,5 @@
 use crate::{
     app::{App, Message},
-    components::animated_size,
     components::menu::MenuType,
     components::{module_group, module_item},
     config::{ModuleDef, ModuleName},
@@ -78,11 +77,6 @@ impl App {
         content: Element<'a, Message>,
         action: Option<OnModulePress>,
     ) -> Element<'a, Message> {
-        let content = if use_theme(|t| t.animations_enabled) {
-            animated_size(content).into()
-        } else {
-            content
-        };
         match action {
             Some(action) => {
                 let mut item = module_item(content);
