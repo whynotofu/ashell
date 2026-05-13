@@ -14,11 +14,8 @@ use iced::{
 pub enum MenuType {
     Updates,
     Settings,
-    Notifications,
-    Tray(String),
-    MediaPlayer,
     SystemInfo,
-    Tempo,
+    Clock,
 }
 
 #[derive(Clone, Debug)]

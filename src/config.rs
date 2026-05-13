@@ -30,21 +30,16 @@ pub struct Config {
     pub layer: Layer,
     pub outputs: Outputs,
     pub modules: Modules,
-    #[serde(rename = "CustomModule")]
-    pub custom_modules: Vec<CustomModuleDef>,
     pub updates: Option<UpdatesModuleConfig>,
     pub workspaces: WorkspacesModuleConfig,
     pub window_title: WindowTitleConfig,
     pub system_info: SystemInfoModuleConfig,
     pub notifications: NotificationsModuleConfig,
-    pub tray: TrayModuleConfig,
-    pub tempo: TempoModuleConfig,
+    pub clock: ClockModuleConfig,
     pub settings: SettingsModuleConfig,
     pub appearance: Appearance,
-    pub media_player: MediaPlayerModuleConfig,
     pub keyboard_layout: KeyboardLayoutModuleConfig,
     pub animations: AnimationsConfig,
-    pub enable_esc_key: bool,
     pub osd: OsdConfig,
 }
 
@@ -63,15 +58,11 @@ impl Default for Config {
             window_title: WindowTitleConfig::default(),
             system_info: SystemInfoModuleConfig::default(),
             notifications: NotificationsModuleConfig::default(),
-            tray: TrayModuleConfig::default(),
-            tempo: TempoModuleConfig::default(),
+            clock: ClockModuleConfig::default(),
             settings: SettingsModuleConfig::default(),
             appearance: Appearance::default(),
-            media_player: MediaPlayerModuleConfig::default(),
             keyboard_layout: KeyboardLayoutModuleConfig::default(),
             animations: AnimationsConfig::default(),
-            custom_modules: vec![],
-            enable_esc_key: false,
             osd: OsdConfig::default(),
         }
     }
@@ -439,62 +430,19 @@ impl Default for NotificationsModuleConfig {
     }
 }
 
-#[derive(Deserialize, Clone, Debug, Default)]
-pub struct TrayModuleConfig {
-    pub blocklist: Vec<RegexCfg>,
-}
-
 #[derive(Deserialize, Clone, Debug)]
 #[serde(default)]
-pub struct TempoModuleConfig {
+pub struct ClockModuleConfig {
     pub clock_format: String,
     #[serde(default)]
     pub formats: Vec<String>,
-    #[serde(default)]
-    pub timezones: Vec<String>,
-    #[serde(default)]
-    pub weather_location: Option<WeatherLocation>,
-    pub weather_indicator: WeatherIndicator,
 }
 
-#[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
-pub enum WeatherIndicator {
-    #[default]
-    IconAndTemperature,
-    Icon,
-    None,
-}
-
-#[derive(Deserialize, Default, Clone, Debug, PartialEq)]
-pub enum WeatherLocation {
-    #[default]
-    Current,
-    City(String),
-    Coordinates(f32, f32),
-}
-
-impl std::hash::Hash for WeatherLocation {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        std::mem::discriminant(self).hash(state);
-        match self {
-            WeatherLocation::Current => {}
-            WeatherLocation::City(city) => city.hash(state),
-            WeatherLocation::Coordinates(lat, lon) => {
-                lat.to_bits().hash(state);
-                lon.to_bits().hash(state);
-            }
-        }
-    }
-}
-
-impl Default for TempoModuleConfig {
+impl Default for ClockModuleConfig {
     fn default() -> Self {
         Self {
             clock_format: "%a %d %b %R".to_string(),
             formats: vec![],
-            timezones: vec![],
-            weather_location: None,
-            weather_indicator: WeatherIndicator::IconAndTemperature,
         }
     }
 }
@@ -566,8 +514,6 @@ pub struct SettingsModuleConfig {
     pub remove_airplane_btn: bool,
     pub remove_idle_btn: bool,
     pub indicators: Vec<SettingsIndicator>,
-    #[serde(rename = "CustomButton")]
-    pub custom_buttons: Vec<SettingsCustomButton>,
 }
 
 impl Default for SettingsModuleConfig {
@@ -607,40 +553,6 @@ impl Default for SettingsModuleConfig {
                 SettingsIndicator::Battery,
                 SettingsIndicator::Brightness,
             ],
-            custom_buttons: Default::default(),
-        }
-    }
-}
-
-#[derive(Deserialize, Clone, Debug)]
-pub struct SettingsCustomButton {
-    pub name: String,
-    pub icon: String,
-    pub command: String,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub status_command: Option<String>,
-    pub tooltip: Option<String>,
-}
-
-#[derive(Deserialize, Copy, Clone, Default, PartialEq, Eq, Debug)]
-pub enum MediaPlayerFormat {
-    Icon,
-    #[default]
-    IconAndTitle,
-}
-
-#[derive(Deserialize, Clone, Debug)]
-#[serde(default)]
-pub struct MediaPlayerModuleConfig {
-    pub max_title_length: u32,
-    pub indicator_format: MediaPlayerFormat,
-}
-
-impl Default for MediaPlayerModuleConfig {
-    fn default() -> Self {
-        MediaPlayerModuleConfig {
-            max_title_length: 100,
-            indicator_format: MediaPlayerFormat::default(),
         }
     }
 }
@@ -921,13 +833,9 @@ pub enum ModuleName {
     SystemInfo,
     KeyboardLayout,
     KeyboardSubmap,
-    Tray,
-    Tempo,
+    Clock,
     Privacy,
     Settings,
-    MediaPlayer,
-    Custom(String),
-    Notifications,
 }
 
 impl<'de> Deserialize<'de> for ModuleName {
@@ -945,21 +853,18 @@ impl<'de> Deserialize<'de> for ModuleName {
             where
                 E: serde::de::Error,
             {
-                Ok(match value {
-                    "Updates" => ModuleName::Updates,
-                    "Workspaces" => ModuleName::Workspaces,
-                    "WindowTitle" => ModuleName::WindowTitle,
-                    "SystemInfo" => ModuleName::SystemInfo,
-                    "KeyboardLayout" => ModuleName::KeyboardLayout,
-                    "KeyboardSubmap" => ModuleName::KeyboardSubmap,
-                    "Tray" => ModuleName::Tray,
-                    "Notifications" => ModuleName::Notifications,
-                    "Tempo" => ModuleName::Tempo,
-                    "Privacy" => ModuleName::Privacy,
-                    "Settings" => ModuleName::Settings,
-                    "MediaPlayer" => ModuleName::MediaPlayer,
-                    other => ModuleName::Custom(other.to_string()),
-                })
+                match value {
+                    "Updates" => Ok(ModuleName::Updates),
+                    "Workspaces" => Ok(ModuleName::Workspaces),
+                    "WindowTitle" => Ok(ModuleName::WindowTitle),
+                    "SystemInfo" => Ok(ModuleName::SystemInfo),
+                    "KeyboardLayout" => Ok(ModuleName::KeyboardLayout),
+                    "KeyboardSubmap" => Ok(ModuleName::KeyboardSubmap),
+                    "Clock" => Ok(ModuleName::Clock),
+                    "Privacy" => Ok(ModuleName::Privacy),
+                    "Settings" => Ok(ModuleName::Settings),
+                    _ => Err(E::custom("No! No!")),
+                }
             }
         }
         deserializer.deserialize_str(ModuleNameVisitor)
@@ -989,7 +894,7 @@ impl Default for Modules {
             left: vec![ModuleDef::Single(ModuleName::Workspaces)],
             center: vec![ModuleDef::Single(ModuleName::WindowTitle)],
             right: vec![ModuleDef::Group(vec![
-                ModuleName::Tempo,
+                ModuleName::Clock,
                 ModuleName::Privacy,
                 ModuleName::Settings,
             ])],
@@ -1055,35 +960,6 @@ impl Deref for RegexCfg {
     fn deref(&self) -> &Self::Target {
         &self.0
     }
-}
-
-#[derive(Deserialize, Copy, Clone, Default, PartialEq, Eq, Debug)]
-pub enum CustomModuleType {
-    #[default]
-    Button,
-    Text,
-}
-
-#[serde_as]
-#[derive(Deserialize, Clone, Debug)]
-pub struct CustomModuleDef {
-    pub name: String,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub command: Option<String>,
-    #[serde(default)]
-    pub icon: Option<String>,
-
-    /// yields json lines containing text, alt, (pot tooltip)
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub listen_cmd: Option<String>,
-    /// map of regex -> icon
-    pub icons: Option<HashMap<RegexCfg, String>>,
-    /// regex to show alert
-    pub alert: Option<RegexCfg>,
-    /// Display type: Button (clickable) or Text (display only)
-    #[serde(default)]
-    pub r#type: CustomModuleType,
-    // .. appearance etc
 }
 
 #[derive(Deserialize, Clone, Debug)]

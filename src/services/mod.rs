@@ -6,12 +6,9 @@ pub mod brightness;
 pub mod compositor;
 pub mod idle_inhibitor;
 pub mod logind;
-pub mod mpris;
 pub mod network;
-pub mod notifications;
 pub mod privacy;
 mod throttle;
-pub mod tray;
 pub mod upower;
 
 #[allow(unused)]

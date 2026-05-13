@@ -8,16 +8,12 @@ use crate::{
 };
 use iced::{Alignment, Element, Length, Subscription, SurfaceId, widget::Row};
 
-pub mod custom_module;
+pub mod clock;
 pub mod keyboard_layout;
 pub mod keyboard_submap;
-pub mod media_player;
-pub mod notifications;
 pub mod privacy;
 pub mod settings;
 pub mod system_info;
-pub mod tempo;
-pub mod tray;
 pub mod updates;
 pub mod window_title;
 pub mod workspaces;
@@ -163,21 +159,6 @@ impl App {
         module_name: &'a ModuleName,
     ) -> Option<(Element<'a, Message>, Option<OnModulePress>)> {
         match module_name {
-            ModuleName::Custom(name) => self.custom.get(name).map(|custom| {
-                let action = match custom.module_type() {
-                    crate::config::CustomModuleType::Text => None,
-                    crate::config::CustomModuleType::Button => {
-                        Some(OnModulePress::Action(Box::new(Message::Custom(
-                            name.clone(),
-                            custom_module::Message::LaunchCommand,
-                        ))))
-                    }
-                };
-                (
-                    custom.view().map(|msg| Message::Custom(name.clone(), msg)),
-                    action,
-                )
-            }),
             ModuleName::Updates => self.updates.as_ref().map(|updates| {
                 (
                     updates.view().map(Message::Updates),
@@ -212,20 +193,16 @@ impl App {
                 .keyboard_submap
                 .view()
                 .map(|view| (view.map(Message::KeyboardSubmap), None)),
-            ModuleName::Tray => self
-                .tray
-                .view(id)
-                .map(|view| (view.map(Message::Tray), None)),
-            ModuleName::Tempo => Some((
-                self.tempo.view().map(Message::Tempo),
+            ModuleName::Clock => Some((
+                self.clock.view().map(Message::Clock),
                 Some(OnModulePress::ToggleMenuWithExtra {
-                    menu_type: MenuType::Tempo,
-                    on_right_press: Some(Box::new(Message::Tempo(tempo::Message::CycleFormat))),
-                    on_scroll_up: Some(Box::new(Message::Tempo(tempo::Message::CycleTimezone(
-                        tempo::TimezoneDirection::Forward,
+                    menu_type: MenuType::Clock,
+                    on_right_press: Some(Box::new(Message::Clock(clock::Message::NextFormat))),
+                    on_scroll_up: Some(Box::new(Message::Clock(clock::Message::ChangeFormat(
+                        clock::Direction::Next,
                     )))),
-                    on_scroll_down: Some(Box::new(Message::Tempo(tempo::Message::CycleTimezone(
-                        tempo::TimezoneDirection::Backward,
+                    on_scroll_down: Some(Box::new(Message::Clock(clock::Message::ChangeFormat(
+                        clock::Direction::Previous,
                     )))),
                 }),
             )),
@@ -233,30 +210,16 @@ impl App {
                 .privacy
                 .view()
                 .map(|view| (view.map(Message::Privacy), None)),
-            ModuleName::MediaPlayer => self.media_player.view().map(|view| {
-                (
-                    view.map(Message::MediaPlayer),
-                    Some(OnModulePress::ToggleMenu(MenuType::MediaPlayer)),
-                )
-            }),
+
             ModuleName::Settings => Some((
                 self.settings.view().map(Message::Settings),
                 Some(OnModulePress::ToggleMenu(MenuType::Settings)),
-            )),
-            ModuleName::Notifications => Some((
-                self.notifications.view().map(Message::Notifications),
-                Some(OnModulePress::ToggleMenu(MenuType::Notifications)),
             )),
         }
     }
 
     fn get_module_subscription(&self, module_name: &ModuleName) -> Option<Subscription<Message>> {
         match module_name {
-            ModuleName::Custom(name) => self.custom.get(name).map(|custom| {
-                custom
-                    .subscription()
-                    .map(|(name, msg)| Message::Custom(name, msg))
-            }),
             ModuleName::Updates => self
                 .updates
                 .as_ref()
@@ -278,18 +241,9 @@ impl App {
                     .subscription()
                     .map(Message::KeyboardSubmap),
             ),
-            ModuleName::Tray => Some(self.tray.subscription().map(Message::Tray)),
-            ModuleName::Tempo => Some(self.tempo.subscription().map(Message::Tempo)),
+            ModuleName::Clock => Some(self.clock.subscription().map(Message::Clock)),
             ModuleName::Privacy => Some(self.privacy.subscription().map(Message::Privacy)),
-            ModuleName::MediaPlayer => {
-                Some(self.media_player.subscription().map(Message::MediaPlayer))
-            }
             ModuleName::Settings => Some(self.settings.subscription().map(Message::Settings)),
-            ModuleName::Notifications => Some(
-                self.notifications
-                    .subscription()
-                    .map(Message::Notifications),
-            ),
         }
     }
 }

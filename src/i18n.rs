@@ -29,13 +29,6 @@ impl UnitSystem {
             Self::Imperial => "°F",
         }
     }
-
-    pub fn wind_speed_symbol(self) -> &'static str {
-        match self {
-            Self::Metric => "km/h",
-            Self::Imperial => "mph",
-        }
-    }
 }
 
 pub struct Localizer {
@@ -99,12 +92,6 @@ pub fn chrono_locale() -> Locale {
 
 pub fn unit_system() -> UnitSystem {
     use_localizer(|l| l.units())
-}
-
-/// Base language subtag of the active locale (e.g. "en", "it"). Useful for
-/// HTTP `Accept-Language` headers and APIs that take an ISO 639 code.
-pub fn language_subtag() -> String {
-    use_localizer(|l| l.loader().current_language().language.to_string())
 }
 
 #[macro_export]

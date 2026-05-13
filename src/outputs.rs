@@ -1,7 +1,7 @@
 use iced::{
-    Anchor, InputRegionRect, KeyboardInteractivity, Layer, LayerShellSettings, OutputId, SurfaceId,
-    Task, destroy_layer_surface, new_layer_surface, set_anchor, set_exclusive_zone,
-    set_input_region, set_keyboard_interactivity, set_size,
+    Anchor, /* InputRegionRect,*/ KeyboardInteractivity, Layer, LayerShellSettings, OutputId,
+    SurfaceId, Task, destroy_layer_surface, new_layer_surface, set_anchor, set_exclusive_zone,
+    /*set_input_region,*/ set_keyboard_interactivity, set_size,
 };
 use log::debug;
 
@@ -50,7 +50,6 @@ pub struct Outputs(Vec<(String, Option<ShellInfo>, Option<OutputId>)>);
 pub enum HasOutput<'a> {
     Main,
     Menu(Option<&'a OpenMenu>),
-    Toast,
     Osd,
 }
 
@@ -144,8 +143,6 @@ impl Outputs {
                     Some(HasOutput::Main)
                 } else if info.menu.surface_id() == Some(id) {
                     Some(HasOutput::Menu(info.menu.open.as_ref()))
-                } else if info.toast_id == Some(id) {
-                    Some(HasOutput::Toast)
                 } else if info.osd_id == Some(id) {
                     Some(HasOutput::Osd)
                 } else {
@@ -555,41 +552,6 @@ impl Outputs {
         self.maybe_release_all_keyboards(task, esc_button_enabled)
     }
 
-    pub fn close_all_menu_if<Message: 'static>(
-        &mut self,
-        menu_type: MenuType,
-        esc_button_enabled: bool,
-    ) -> Task<Message> {
-        let task = Task::batch(
-            self.0
-                .iter_mut()
-                .filter_map(|(_, shell_info, _)| {
-                    shell_info
-                        .as_mut()
-                        .map(|si| si.menu.close_if(menu_type.clone()))
-                })
-                .collect::<Vec<_>>(),
-        );
-
-        self.maybe_release_all_keyboards(task, esc_button_enabled)
-    }
-
-    pub fn close_all_menus<Message: 'static>(&mut self, esc_button_enabled: bool) -> Task<Message> {
-        let task = Task::batch(
-            self.0
-                .iter_mut()
-                .filter_map(|(_, shell_info, _)| {
-                    shell_info
-                        .as_mut()
-                        .filter(|si| si.menu.is_open())
-                        .map(|si| si.menu.close())
-                })
-                .collect::<Vec<_>>(),
-        );
-
-        self.maybe_release_all_keyboards(task, esc_button_enabled)
-    }
-
     pub fn request_keyboard<Message: 'static>(&self, id: SurfaceId) -> Task<Message> {
         match self.find_by_surface_id(id) {
             Some((_, Some(shell_info), _)) => shell_info.menu.request_keyboard(),
@@ -610,6 +572,7 @@ impl Outputs {
     /// the compositor fills the output height. The surface starts with an
     /// empty input region (fully click-through); `update_toast_input_region`
     /// restricts input to just the rendered toast area after layout.
+    /*
     pub fn show_toast_layer<Message: 'static>(
         &mut self,
         width: u32,
@@ -652,9 +615,11 @@ impl Outputs {
 
         Task::batch(tasks)
     }
+    */
 
     /// Update the input region of the toast surface(s) so only the rendered
     /// toast content accepts pointer input. Everything else is click-through.
+    /*
     pub fn update_toast_input_region<Message: 'static>(
         &self,
         content_size: iced::Size,
@@ -688,6 +653,7 @@ impl Outputs {
         }
         Task::batch(tasks)
     }
+    */
 
     /// Store the logical height for an output (used for bottom-aligned toast input regions).
     pub fn set_output_logical_height(&mut self, output_id: OutputId, height: u32) {
@@ -700,6 +666,7 @@ impl Outputs {
         }
     }
 
+    /*
     pub fn hide_toast_layer<Message: 'static>(&mut self) -> Task<Message> {
         let mut tasks = vec![];
         for (_, shell_info, _) in &mut self.0 {
@@ -711,6 +678,7 @@ impl Outputs {
         }
         Task::batch(tasks)
     }
+    */
 
     /// Create a centered bottom-anchored overlay surface per output to render the OSD.
     pub fn show_osd_layer<Message: 'static>(&mut self, width: u32, height: u32) -> Task<Message> {
