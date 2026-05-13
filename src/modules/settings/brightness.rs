@@ -1,12 +1,12 @@
 use crate::{
     components::{format_indicator, icons::StaticIcon, slider_control},
     config::SettingsFormat,
+    osd,
     services::{
         ReadOnlyService, Service, ServiceEvent,
         brightness::{BrightnessCommand, BrightnessService},
     },
-    utils::IndicatorState,
-    utils::remote_value,
+    utils::{IndicatorState, remote_value},
 };
 use iced::{
     Element, Subscription, Task,
@@ -17,23 +17,38 @@ use iced::{
 #[derive(Debug, Clone)]
 pub enum Message {
     Event(ServiceEvent<BrightnessService>),
-    Changed(remote_value::Message<u32>),
+    Changed(remote_value::Message<u32>, bool),
     MenuOpened,
-    ConfigReloaded(SettingsFormat),
+    ConfigReloaded(BrightnessSettingsConfig),
 }
 
 pub enum Action {
     None,
-    Command(Task<Message>),
+    Command(Task<Message>, Option<osd::OsdMessage>),
+}
+
+#[derive(Debug, Clone)]
+pub struct BrightnessSettingsConfig {
+    pub indicator_format: SettingsFormat,
+    pub step: u32,
+}
+
+impl BrightnessSettingsConfig {
+    pub fn new(indicator_format: SettingsFormat, step: u32) -> Self {
+        Self {
+            indicator_format,
+            step,
+        }
+    }
 }
 
 pub struct BrightnessSettings {
-    config: SettingsFormat,
+    config: BrightnessSettingsConfig,
     service: Option<BrightnessService>,
 }
 
 impl BrightnessSettings {
-    pub fn new(config: SettingsFormat) -> Self {
+    pub fn new(config: BrightnessSettingsConfig) -> Self {
         Self {
             config,
             service: None,
@@ -44,38 +59,35 @@ impl BrightnessSettings {
         self.service.as_ref().map(|s| (s.current.value(), s.max))
     }
 
-    fn step(max: u32) -> u32 {
-        (5 * max / 100).max(1)
-    }
-
     pub fn brightness_adjust(&mut self, up: bool) -> Action {
         let Some((cur, max)) = self.current_brightness() else {
             return Action::None;
         };
-        let step = Self::step(max);
+        let step = (self.config.step * max / 100).max(1);
         let new_val = if up {
             (cur + step).min(max)
         } else {
             cur.saturating_sub(step)
         };
-        self.update(Message::Changed(remote_value::Message::RequestAndTimeout(
-            new_val,
-        )))
+        self.update(Message::Changed(
+            remote_value::Message::RequestAndTimeout(new_val),
+            true,
+        ))
     }
 
-    fn on_scroll(current: u32, max: u32) -> impl Fn(ScrollDelta) -> Message {
+    fn on_scroll(current: u32, max: u32, show_osd: bool) -> impl Fn(ScrollDelta) -> Message {
         move |delta| {
             let y = match delta {
                 ScrollDelta::Lines { y, .. } => y,
                 ScrollDelta::Pixels { y, .. } => y,
             };
-            let step = Self::step(max);
+            let step = (max / 100).max(1);
             let new = if y > 0.0 {
                 (current + step).min(max)
             } else {
                 current.saturating_sub(step)
             };
-            Message::Changed(remote_value::Message::RequestAndTimeout(new))
+            Message::Changed(remote_value::Message::RequestAndTimeout(new), show_osd)
         }
     }
 
@@ -94,12 +106,25 @@ impl BrightnessSettings {
                 }
                 _ => Action::None,
             },
-            Message::Changed(message) => {
-                if let Some(service) = self.service.as_mut() {
-                    if let Some(value) = message.value() {
-                        let _ = service.command(BrightnessCommand(value));
-                    }
-                    return Action::Command(service.current.update(message).map(Message::Changed));
+            Message::Changed(message, show_osd) => {
+                if let Some(service) = self.service.as_mut()
+                    && let Some(value) = message.value()
+                {
+                    let _ = service.command(BrightnessCommand(value));
+                    let osd = if show_osd && message != remote_value::Message::ShowReceived {
+                        Some(osd::OsdMessage::Brightness {
+                            value: value as f32 / service.max as f32,
+                        })
+                    } else {
+                        None
+                    };
+                    return Action::Command(
+                        service
+                            .current
+                            .update(message)
+                            .map(move |msg| Message::Changed(msg, show_osd)),
+                        osd,
+                    );
                 }
                 Action::None
             }
@@ -109,8 +134,8 @@ impl BrightnessSettings {
                 }
                 Action::None
             }
-            Message::ConfigReloaded(format) => {
-                self.config = format;
+            Message::ConfigReloaded(config) => {
+                self.config = config;
                 Action::None
             }
         }
@@ -123,7 +148,7 @@ impl BrightnessSettings {
                 0..=service.max,
                 service.current.value(),
                 Message::Changed,
-                Self::on_scroll(service.current.value(), service.max),
+                Self::on_scroll(service.current.value(), service.max, false),
             )
             .into()
         })
@@ -131,10 +156,10 @@ impl BrightnessSettings {
 
     pub fn brightness_indicator<'a>(&'a self) -> Option<Element<'a, Message>> {
         self.service.as_ref().map(|service| {
-            let scroll_handler = Self::on_scroll(service.current.value(), service.max);
+            let scroll_handler = Self::on_scroll(service.current.value(), service.max, true);
 
             format_indicator(
-                self.config,
+                self.config.indicator_format,
                 StaticIcon::Brightness,
                 Self::percent_text(service).into(),
                 IndicatorState::Normal,
