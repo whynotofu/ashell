@@ -13,7 +13,6 @@ pub mod keyboard_submap;
 pub mod privacy;
 pub mod settings;
 pub mod system_info;
-pub mod updates;
 pub mod window_title;
 pub mod workspaces;
 
@@ -153,12 +152,6 @@ impl App {
         module_name: &'a ModuleName,
     ) -> Option<(Element<'a, Message>, Option<OnModulePress>)> {
         match module_name {
-            ModuleName::Updates => self.updates.as_ref().map(|updates| {
-                (
-                    updates.view().map(Message::Updates),
-                    Some(OnModulePress::ToggleMenu(MenuType::Updates)),
-                )
-            }),
             ModuleName::Workspaces => Some((
                 self.workspaces
                     .view(id, &self.outputs)
@@ -214,10 +207,6 @@ impl App {
 
     fn get_module_subscription(&self, module_name: &ModuleName) -> Option<Subscription<Message>> {
         match module_name {
-            ModuleName::Updates => self
-                .updates
-                .as_ref()
-                .map(|updates| updates.subscription().map(Message::Updates)),
             ModuleName::Workspaces => Some(self.workspaces.subscription().map(Message::Workspaces)),
             ModuleName::WindowTitle => {
                 Some(self.window_title.subscription().map(Message::WindowTitle))

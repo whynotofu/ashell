@@ -46,27 +46,6 @@ impl ActiveWindow {
             ActiveWindow::Niri(w) => &w.title,
         }
     }
-
-    pub fn class(&self) -> &str {
-        match self {
-            ActiveWindow::Hyprland(w) => &w.class,
-            ActiveWindow::Niri(w) => &w.class,
-        }
-    }
-
-    pub fn initial_title(&self) -> Result<&str, &str> {
-        match self {
-            ActiveWindow::Hyprland(w) => Ok(&w.initial_title),
-            ActiveWindow::Niri(_) => Err("InitialTitle isn't supported on Niri"),
-        }
-    }
-
-    pub fn initial_class(&self) -> Result<&str, &str> {
-        match self {
-            ActiveWindow::Hyprland(w) => Ok(&w.initial_class),
-            ActiveWindow::Niri(_) => Err("InitialClass isn't supported on Niri"),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Default)]

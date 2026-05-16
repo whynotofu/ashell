@@ -87,7 +87,7 @@ impl Outputs {
     pub fn get_height(style: AppearanceStyle, scale_factor: f64) -> f64 {
         (HEIGHT
             - match style {
-                AppearanceStyle::Solid | AppearanceStyle::Gradient => 8.,
+                AppearanceStyle::Solid => 8.,
                 AppearanceStyle::Islands => 0.,
             })
             * scale_factor

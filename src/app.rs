@@ -1,7 +1,7 @@
 use crate::{
     HEIGHT,
     components::{ButtonUIRef, Centerbox, menu::MenuType},
-    config::{self, AppearanceStyle, Config, Modules, Position},
+    config::{self, AppearanceStyle, Config, Modules},
     get_log_spec,
     i18n::{Localizer, init_localizer},
     ipc::IpcCommand,
@@ -13,7 +13,6 @@ use crate::{
         privacy::Privacy,
         settings::{self, Settings},
         system_info::SystemInfo,
-        updates::Updates,
         window_title::WindowTitle,
         workspaces::Workspaces,
     },
@@ -24,14 +23,12 @@ use crate::{
 };
 use flexi_logger::LoggerHandle;
 use iced::{
-    Alignment, Color, Element, Gradient, Length, OutputEvent, Radians, Subscription, SurfaceId,
-    Task, Theme,
-    gradient::Linear,
+    Alignment, Element, Length, OutputEvent, Subscription, SurfaceId, Task, Theme,
     set_exclusive_zone,
     widget::{Row, container, mouse_area},
 };
 use log::{info, warn};
-use std::{f32::consts::PI, path::PathBuf};
+use std::path::PathBuf;
 
 const OSD_WIDTH: u32 = 250;
 const OSD_HEIGHT: u32 = 64;
@@ -51,7 +48,6 @@ pub struct App {
     logger: LoggerHandle,
     pub general_config: GeneralConfig,
     pub outputs: Outputs,
-    pub updates: Option<Updates>,
     pub workspaces: Workspaces,
     pub window_title: WindowTitle,
     pub system_info: SystemInfo,
@@ -69,7 +65,6 @@ pub enum Message {
     ConfigChanged(Box<Config>),
     ToggleMenu(MenuType, SurfaceId, ButtonUIRef),
     CloseMenu(SurfaceId),
-    Updates(modules::updates::Message),
     Workspaces(modules::workspaces::Message),
     WindowTitle(modules::window_title::Message),
     SystemInfo(modules::system_info::Message),
@@ -111,10 +106,9 @@ impl App {
                         layer: config.layer,
                     },
                     outputs,
-                    updates: config.updates.map(Updates::new),
                     workspaces: Workspaces::new(config.workspaces),
                     window_title: WindowTitle::new(config.window_title),
-                    system_info: SystemInfo::new(config.system_info),
+                    system_info: SystemInfo::new(),
                     keyboard_layout: KeyboardLayout::new(config.keyboard_layout),
                     keyboard_submap: KeyboardSubmap::default(),
                     clock: Clock::new(config.clock),
@@ -136,7 +130,6 @@ impl App {
             modules: config.modules,
             layer: config.layer,
         };
-        self.updates = config.updates.map(Updates::new);
 
         // ignore task, since config change should not generate any
         let _ = self
@@ -151,7 +144,7 @@ impl App {
                 config.window_title,
             ));
 
-        self.system_info = SystemInfo::new(config.system_info);
+        self.system_info = SystemInfo::new();
 
         let _ = self
             .keyboard_layout
@@ -211,11 +204,6 @@ impl App {
             Message::ToggleMenu(menu_type, id, button_ui_ref) => {
                 let mut cmd = vec![];
                 match &menu_type {
-                    MenuType::Updates => {
-                        if let Some(updates) = self.updates.as_mut() {
-                            updates.update(modules::updates::Message::MenuOpened);
-                        }
-                    }
                     MenuType::Clock => {
                         self.clock.update(clock::Message::Reset);
                     }
@@ -239,22 +227,6 @@ impl App {
                 Task::batch(cmd)
             }
             Message::CloseMenu(id) => self.outputs.close_menu(id, None, false),
-            Message::Updates(msg) => {
-                if let Some(updates) = self.updates.as_mut() {
-                    match updates.update(msg) {
-                        modules::updates::Action::None => Task::none(),
-                        modules::updates::Action::CheckForUpdates(task) => {
-                            task.map(Message::Updates)
-                        }
-                        modules::updates::Action::CloseMenu(id, task) => Task::batch(vec![
-                            task.map(Message::Updates),
-                            self.outputs.close_menu(id, Some(MenuType::Updates), false),
-                        ]),
-                    }
-                } else {
-                    Task::none()
-                }
-            }
             Message::Workspaces(msg) => self.workspaces.update(msg).map(Message::Workspaces),
             Message::WindowTitle(msg) => {
                 self.window_title.update(msg);
@@ -401,7 +373,7 @@ impl App {
                 let height = if self.visible {
                     (crate::HEIGHT
                         - match bar_style {
-                            AppearanceStyle::Solid | AppearanceStyle::Gradient => 8.,
+                            AppearanceStyle::Solid => 8.,
                             AppearanceStyle::Islands => 0.,
                         })
                         * scale_factor
@@ -432,73 +404,26 @@ impl App {
 
                 let [left, center, right] = self.modules_section(id);
 
-                let (space, bar_style, bar_position, opacity, menu) =
-                    use_theme(|t| (t.space, t.bar_style, t.bar_position, t.opacity, t.menu));
+                let (space, bar_style, opacity, menu) =
+                    use_theme(|t| (t.space, t.bar_style, t.opacity, t.menu));
                 let centerbox = Centerbox::new([left, center, right])
                     .spacing(space.xxs)
                     .width(Length::Fill)
                     .align_items(Alignment::Center)
                     .height(if bar_style == AppearanceStyle::Islands {
-                        // HEIGHT
-                        30.
+                        HEIGHT
                     } else {
                         HEIGHT - space.xs as f64
                     } as f32)
                     .padding(if bar_style == AppearanceStyle::Islands {
-                        //[space.xxs, space.xxs]
-                        iced::Padding {
-                            left: 0.,
-                            top: 0.,
-                            right: 0.,
-                            bottom: 4.,
-                        }
+                        [space.xxs, space.xxs]
                     } else {
-                        //[0.0, 0.0]
-                        iced::Padding {
-                            left: 0.,
-                            top: 0.,
-                            right: 0.,
-                            bottom: 0.,
-                        }
+                        [0.0, 0.0]
                     });
 
                 let menu_is_open = self.outputs.menu_is_open();
                 let status_bar = container(centerbox).style(move |t: &Theme| container::Style {
                     background: match bar_style {
-                        AppearanceStyle::Gradient => Some({
-                            let start_color = t.palette().background.scale_alpha(opacity);
-
-                            let start_color = if menu_is_open {
-                                darken_color(start_color, menu.backdrop)
-                            } else {
-                                start_color
-                            };
-
-                            let end_color = if menu_is_open {
-                                backdrop_color(menu.backdrop)
-                            } else {
-                                Color::TRANSPARENT
-                            };
-
-                            Gradient::Linear(
-                                Linear::new(Radians(PI))
-                                    .add_stop(
-                                        0.0,
-                                        match bar_position {
-                                            Position::Top => start_color,
-                                            Position::Bottom => end_color,
-                                        },
-                                    )
-                                    .add_stop(
-                                        1.0,
-                                        match bar_position {
-                                            Position::Top => end_color,
-                                            Position::Bottom => start_color,
-                                        },
-                                    ),
-                            )
-                            .into()
-                        }),
                         AppearanceStyle::Solid => Some({
                             let bg = t.palette().background.scale_alpha(opacity);
                             if menu_is_open {
@@ -530,17 +455,6 @@ impl App {
             Some(HasOutput::Menu(Some(open_menu))) => {
                 let ui_ref = open_menu.button_ui_ref;
                 match &open_menu.menu_type {
-                    MenuType::Updates => {
-                        if let Some(updates) = self.updates.as_ref() {
-                            self.menu_wrapper(
-                                id,
-                                updates.menu_view(id).map(Message::Updates),
-                                ui_ref,
-                            )
-                        } else {
-                            Row::new().into()
-                        }
-                    }
                     MenuType::Settings => self.menu_wrapper(
                         id,
                         self.settings

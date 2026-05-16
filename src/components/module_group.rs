@@ -10,7 +10,7 @@ pub fn module_group<'a, Msg: 'static>(content: Element<'a, Msg>) -> Element<'a, 
         use_theme(|theme| (theme.bar_style, theme.opacity, theme.radius));
 
     match bar_style {
-        AppearanceStyle::Solid | AppearanceStyle::Gradient => content,
+        AppearanceStyle::Solid => content,
         AppearanceStyle::Islands => container(content)
             .style(move |iced_theme: &iced::Theme| container::Style {
                 background: Some(iced_theme.palette().background.scale_alpha(opacity).into()),

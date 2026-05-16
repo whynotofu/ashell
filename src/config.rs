@@ -1,7 +1,5 @@
 use crate::app::Message;
-use crate::i18n::UnitSystem;
 use crate::services::upower::PeripheralDeviceKind;
-use crate::utils::celsius_to_fahrenheit;
 use hex_color::HexColor;
 use iced::futures::StreamExt;
 use iced::{Color, Subscription, futures::SinkExt, stream::channel, theme::palette};
@@ -9,13 +7,11 @@ use inotify::EventMask;
 use inotify::Inotify;
 use inotify::WatchMask;
 use log::{debug, error, info, warn};
-use regex::Regex;
 use serde::{Deserialize, Deserializer, de::Visitor};
-use serde_with::DisplayFromStr;
-use serde_with::serde_as;
+
 use std::path::PathBuf;
 use std::time::Duration;
-use std::{collections::HashMap, error::Error, ops::Deref, path::Path};
+use std::{collections::HashMap, error::Error, path::Path};
 use tokio::time::sleep;
 
 pub const DEFAULT_CONFIG_FILE_PATH: &str = "~/.config/ashell/config.toml";
@@ -30,11 +26,8 @@ pub struct Config {
     pub layer: Layer,
     pub outputs: Outputs,
     pub modules: Modules,
-    pub updates: Option<UpdatesModuleConfig>,
     pub workspaces: WorkspacesModuleConfig,
     pub window_title: WindowTitleConfig,
-    pub system_info: SystemInfoModuleConfig,
-    pub notifications: NotificationsModuleConfig,
     pub clock: ClockModuleConfig,
     pub settings: SettingsModuleConfig,
     pub appearance: Appearance,
@@ -52,46 +45,13 @@ impl Default for Config {
             layer: Layer::default(),
             outputs: Outputs::default(),
             modules: Modules::default(),
-            updates: None,
             workspaces: WorkspacesModuleConfig::default(),
             window_title: WindowTitleConfig::default(),
-            system_info: SystemInfoModuleConfig::default(),
-            notifications: NotificationsModuleConfig::default(),
             clock: ClockModuleConfig::default(),
             settings: SettingsModuleConfig::default(),
             appearance: Appearance::default(),
             keyboard_layout: KeyboardLayoutModuleConfig::default(),
             osd: OsdConfig::default(),
-        }
-    }
-}
-
-impl Config {
-    fn validate(&mut self) {
-        if let Some(ref mut updates) = self.updates {
-            updates.validate();
-        }
-        self.system_info.validate();
-    }
-}
-
-#[derive(Deserialize, Clone, Debug)]
-pub struct UpdatesModuleConfig {
-    pub check_cmd: String,
-    pub update_cmd: String,
-    #[serde(default = "UpdatesModuleConfig::default_interval")]
-    pub interval: u64,
-}
-
-impl UpdatesModuleConfig {
-    const fn default_interval() -> u64 {
-        3600
-    }
-
-    fn validate(&mut self) {
-        if self.interval == 0 {
-            warn!("UpdatesModuleConfig.interval is 0, setting to 1");
-            self.interval = 1;
         }
     }
 }
@@ -125,26 +85,15 @@ pub enum InvertScrollDirection {
     Trackpad,
 }
 
-#[derive(Deserialize, Copy, Clone, Default, PartialEq, Eq, Debug)]
-pub enum WindowTitleMode {
-    #[default]
-    Title,
-    Class,
-    InitialTitle,
-    InitialClass,
-}
-
 #[derive(Deserialize, Copy, Clone, Debug)]
 #[serde(default)]
 pub struct WindowTitleConfig {
-    pub mode: WindowTitleMode,
     pub truncate_title_after_length: u32,
 }
 
 impl Default for WindowTitleConfig {
     fn default() -> Self {
         Self {
-            mode: Default::default(),
             truncate_title_after_length: 150,
         }
     }
@@ -154,272 +103,6 @@ impl Default for WindowTitleConfig {
 #[serde(default)]
 pub struct KeyboardLayoutModuleConfig {
     pub labels: HashMap<String, String>,
-}
-
-#[derive(Deserialize, Clone, Debug)]
-#[serde(default)]
-pub struct SystemInfoCpu {
-    pub warn_threshold: u32,
-    pub alert_threshold: u32,
-
-    pub format: CpuFormat,
-}
-
-fn validate_thresholds<T: PartialOrd + Copy + std::fmt::Display>(
-    warn: &mut T,
-    alert: &mut T,
-    name: &str,
-) {
-    if *warn >= *alert {
-        warn!(
-            "{name} warn_threshold ({warn}) >= alert_threshold ({alert}), setting both to {alert}"
-        );
-        *warn = *alert;
-    }
-}
-
-impl SystemInfoCpu {
-    fn validate(&mut self) {
-        validate_thresholds(&mut self.warn_threshold, &mut self.alert_threshold, "CPU");
-    }
-}
-
-impl Default for SystemInfoCpu {
-    fn default() -> Self {
-        Self {
-            warn_threshold: 60,
-            alert_threshold: 80,
-            format: CpuFormat::Percentage,
-        }
-    }
-}
-
-#[derive(Deserialize, Clone, Debug)]
-#[serde(default)]
-pub struct SystemInfoMemory {
-    pub warn_threshold: u32,
-    pub alert_threshold: u32,
-    pub format: MemoryFormat,
-}
-
-impl SystemInfoMemory {
-    fn validate(&mut self) {
-        validate_thresholds(
-            &mut self.warn_threshold,
-            &mut self.alert_threshold,
-            "Memory",
-        );
-    }
-}
-
-impl Default for SystemInfoMemory {
-    fn default() -> Self {
-        Self {
-            warn_threshold: 70,
-            alert_threshold: 85,
-            format: MemoryFormat::Percentage,
-        }
-    }
-}
-
-const DEFAULT_TEMP_WARN_CELSIUS: i32 = 60;
-const DEFAULT_TEMP_ALERT_CELSIUS: i32 = 80;
-
-#[derive(Deserialize, Clone, Debug)]
-#[serde(default)]
-pub struct SystemInfoTemperature {
-    warn_threshold: Option<i32>,
-    alert_threshold: Option<i32>,
-    pub sensor: String,
-}
-
-impl SystemInfoTemperature {
-    pub fn warn_threshold(&self) -> i32 {
-        self.warn_threshold
-            .unwrap_or_else(|| match crate::i18n::unit_system() {
-                UnitSystem::Metric => DEFAULT_TEMP_WARN_CELSIUS,
-                UnitSystem::Imperial => celsius_to_fahrenheit(DEFAULT_TEMP_WARN_CELSIUS),
-            })
-    }
-
-    pub fn alert_threshold(&self) -> i32 {
-        self.alert_threshold
-            .unwrap_or_else(|| match crate::i18n::unit_system() {
-                UnitSystem::Metric => DEFAULT_TEMP_ALERT_CELSIUS,
-                UnitSystem::Imperial => celsius_to_fahrenheit(DEFAULT_TEMP_ALERT_CELSIUS),
-            })
-    }
-
-    fn validate(&mut self) {
-        if let (Some(warn), Some(alert)) = (&mut self.warn_threshold, &mut self.alert_threshold) {
-            validate_thresholds(warn, alert, "Temperature");
-        }
-    }
-}
-
-impl Default for SystemInfoTemperature {
-    fn default() -> Self {
-        Self {
-            warn_threshold: None,
-            alert_threshold: None,
-            sensor: "acpitz temp1".to_string(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Default)]
-pub enum DiskFormat {
-    #[default]
-    Percentage,
-    Fraction,
-}
-
-#[derive(Clone, Debug, Deserialize, Default)]
-pub enum MemoryFormat {
-    #[default]
-    Percentage,
-    Fraction,
-}
-
-#[derive(Clone, Debug, Deserialize, Default)]
-pub enum CpuFormat {
-    #[default]
-    Percentage,
-    Frequency,
-}
-
-#[derive(Deserialize, Clone, Debug)]
-#[serde(default)]
-pub struct SystemInfoDisk {
-    pub warn_threshold: u32,
-    pub alert_threshold: u32,
-    pub format: DiskFormat,
-    pub mounts: Option<Vec<String>>,
-}
-
-impl SystemInfoDisk {
-    fn validate(&mut self) {
-        validate_thresholds(&mut self.warn_threshold, &mut self.alert_threshold, "Disk");
-    }
-}
-
-impl Default for SystemInfoDisk {
-    fn default() -> Self {
-        Self {
-            warn_threshold: 80,
-            alert_threshold: 90,
-            format: DiskFormat::Percentage,
-            mounts: None,
-        }
-    }
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct SystemInfoDiskIndicatorConfig {
-    #[serde(rename = "Disk")]
-    pub path: String,
-    #[serde(rename = "Name")]
-    pub name: Option<String>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub enum SystemInfoIndicator {
-    Cpu,
-    Memory,
-    MemorySwap,
-    Temperature,
-    IpAddress,
-    DownloadSpeed,
-    UploadSpeed,
-    #[serde(untagged)]
-    Disk(SystemInfoDiskIndicatorConfig),
-}
-
-#[derive(Deserialize, Clone, Debug)]
-#[serde(default)]
-pub struct SystemInfoModuleConfig {
-    pub indicators: Vec<SystemInfoIndicator>,
-    #[serde(default = "SystemInfoModuleConfig::default_interval")]
-    pub interval: u64,
-    pub cpu: SystemInfoCpu,
-    pub memory: SystemInfoMemory,
-    pub temperature: SystemInfoTemperature,
-    pub disk: SystemInfoDisk,
-}
-
-impl SystemInfoModuleConfig {
-    const fn default_interval() -> u64 {
-        5
-    }
-
-    fn validate(&mut self) {
-        if self.interval == 0 {
-            warn!("SystemInfoModuleConfig.interval is 0, setting to 1");
-            self.interval = 1;
-        }
-        self.cpu.validate();
-        self.memory.validate();
-        self.temperature.validate();
-        self.disk.validate();
-    }
-}
-
-impl Default for SystemInfoModuleConfig {
-    fn default() -> Self {
-        Self {
-            indicators: vec![
-                SystemInfoIndicator::Cpu,
-                SystemInfoIndicator::Memory,
-                SystemInfoIndicator::Temperature,
-            ],
-            interval: Self::default_interval(),
-            cpu: SystemInfoCpu::default(),
-            memory: SystemInfoMemory::default(),
-            temperature: SystemInfoTemperature::default(),
-            disk: SystemInfoDisk::default(),
-        }
-    }
-}
-
-#[derive(Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ToastPosition {
-    TopLeft,
-    #[default]
-    TopRight,
-    BottomLeft,
-    BottomRight,
-}
-
-#[derive(Deserialize, Clone, Debug)]
-#[serde(default)]
-pub struct NotificationsModuleConfig {
-    pub format: String,
-    pub show_timestamps: bool,
-    pub show_bodies: bool,
-    pub grouped: bool,
-    pub toast: bool,
-    pub toast_position: ToastPosition,
-    pub toast_timeout: u64,
-    pub toast_limit: usize,
-    pub toast_max_height: u32,
-    pub blocklist: Vec<RegexCfg>,
-}
-impl Default for NotificationsModuleConfig {
-    fn default() -> Self {
-        Self {
-            format: "%H:%M".to_string(),
-            show_timestamps: true,
-            show_bodies: true,
-            grouped: false,
-            toast: true,
-            toast_position: ToastPosition::default(),
-            toast_timeout: 5000,
-            toast_limit: 5,
-            toast_max_height: 150,
-            blocklist: vec![],
-        }
-    }
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -490,11 +173,8 @@ pub struct SettingsModuleConfig {
     pub peripheral_expanded_by_default: bool,
     #[serde(deserialize_with = "step_deserializer")]
     pub audio_step: u32,
-    pub network_indicator_format: SettingsFormat,
     #[serde(deserialize_with = "step_deserializer")]
     pub brightness_step: u32,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub wifi_more_cmd: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub vpn_more_cmd: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
@@ -540,9 +220,7 @@ impl Default for SettingsModuleConfig {
             peripheral_battery_format: SettingsFormat::Icon,
             peripheral_expanded_by_default: false,
             audio_step: 5,
-            network_indicator_format: SettingsFormat::Icon,
             brightness_step: 5,
-            wifi_more_cmd: Default::default(),
             vpn_more_cmd: Default::default(),
             bluetooth_more_cmd: Default::default(),
             remove_airplane_btn: Default::default(),
@@ -696,7 +374,6 @@ pub enum AppearanceStyle {
     #[default]
     Islands,
     Solid,
-    Gradient,
 }
 
 #[derive(Deserialize, Clone, Copy, Debug)]
@@ -832,7 +509,6 @@ pub enum Layer {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ModuleName {
-    Updates,
     Workspaces,
     WindowTitle,
     SystemInfo,
@@ -859,7 +535,6 @@ impl<'de> Deserialize<'de> for ModuleName {
                 E: serde::de::Error,
             {
                 match value {
-                    "Updates" => Ok(ModuleName::Updates),
                     "Workspaces" => Ok(ModuleName::Workspaces),
                     "WindowTitle" => Ok(ModuleName::WindowTitle),
                     "SystemInfo" => Ok(ModuleName::SystemInfo),
@@ -939,34 +614,6 @@ where
         .and_then(|value| (!value.trim().is_empty()).then_some(value)))
 }
 
-/// Newtype wrapper around `Regex`to be deserializable and usable as a hashmap key
-#[serde_as]
-#[derive(Debug, Clone, Deserialize)]
-#[serde(transparent)]
-pub struct RegexCfg(#[serde_as(as = "DisplayFromStr")] pub Regex);
-
-impl PartialEq for RegexCfg {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.as_str() == other.0.as_str()
-    }
-}
-impl Eq for RegexCfg {}
-
-impl std::hash::Hash for RegexCfg {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        // hash the raw pattern string
-        self.0.as_str().hash(state);
-    }
-}
-
-impl Deref for RegexCfg {
-    type Target = Regex;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 #[derive(Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct OsdConfig {
@@ -1035,8 +682,6 @@ fn read_config(path: &Path) -> Result<Config, Box<dyn Error + Send>> {
     match res {
         Ok(config) => {
             info!("Config file loaded successfully");
-            let mut config: Config = config;
-            config.validate();
             Ok(config)
         }
         Err(e) => {

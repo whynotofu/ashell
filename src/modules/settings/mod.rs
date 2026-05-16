@@ -202,10 +202,8 @@ impl Settings {
                 config.brightness_step,
             )),
             network: NetworkSettings::new(NetworkSettingsConfig::new(
-                config.wifi_more_cmd,
                 config.vpn_more_cmd,
                 config.remove_airplane_btn,
-                config.network_indicator_format,
             )),
             bluetooth: BluetoothSettings::new(BluetoothSettingsConfig::new(
                 config.bluetooth_more_cmd,
@@ -446,12 +444,7 @@ impl Settings {
                         config.audio_step,
                     )));
                 self.network.update(network::Message::ConfigReloaded(
-                    NetworkSettingsConfig::new(
-                        config.wifi_more_cmd,
-                        config.vpn_more_cmd,
-                        config.remove_airplane_btn,
-                        config.network_indicator_format,
-                    ),
+                    NetworkSettingsConfig::new(config.vpn_more_cmd, config.remove_airplane_btn),
                 ));
                 self.bluetooth.update(bluetooth::Message::ConfigReloaded(
                     BluetoothSettingsConfig::new(config.bluetooth_more_cmd),

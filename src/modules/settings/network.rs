@@ -85,14 +85,12 @@ pub enum Message {
     Event(ServiceEvent<NetworkService>),
     ToggleWiFi,
     ScanNearByWiFi,
-    WiFiMore(SurfaceId),
     VpnMore(SurfaceId),
     SelectAccessPoint(AccessPoint),
     RequestWiFiPassword(SurfaceId, String),
     ConfirmOpenNetwork(String),
     ToggleVpn(Vpn),
     ToggleAirplaneMode,
-    OpenMore,
     ToggleWifiMenu,
     ToggleVPNMenu,
     WifiMenuOpened,
@@ -115,24 +113,15 @@ pub enum Action {
 
 #[derive(Debug, Clone)]
 pub struct NetworkSettingsConfig {
-    pub wifi_more_cmd: Option<String>,
     pub vpn_more_cmd: Option<String>,
     pub remove_airplane_btn: bool,
-    pub indicator_format: SettingsFormat,
 }
 
 impl NetworkSettingsConfig {
-    pub fn new(
-        wifi_more_cmd: Option<String>,
-        vpn_more_cmd: Option<String>,
-        remove_airplane_btn: bool,
-        indicator_format: SettingsFormat,
-    ) -> Self {
+    pub fn new(vpn_more_cmd: Option<String>, remove_airplane_btn: bool) -> Self {
         Self {
-            wifi_more_cmd,
             vpn_more_cmd,
             remove_airplane_btn,
-            indicator_format,
         }
     }
 }
@@ -209,14 +198,6 @@ impl NetworkSettings {
                 ),
                 _ => Action::None,
             },
-            Message::WiFiMore(id) => {
-                if let Some(cmd) = &self.config.wifi_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.to_string());
-                    Action::CloseMenu(id)
-                } else {
-                    Action::None
-                }
-            }
             Message::VpnMore(id) => {
                 if let Some(cmd) = &self.config.vpn_more_cmd {
                     crate::utils::launcher::execute_command(cmd.to_string());
@@ -233,12 +214,6 @@ impl NetworkSettings {
                 ),
                 _ => Action::None,
             },
-            Message::OpenMore => {
-                if let Some(cmd) = &self.config.wifi_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.to_string());
-                }
-                Action::None
-            }
             Message::ToggleWifiMenu => Action::ToggleWifiMenu,
             Message::ToggleVPNMenu => Action::ToggleVpnMenu,
             Message::WifiMenuOpened => {
@@ -325,21 +300,19 @@ impl NetworkSettings {
                     let strength_text = strength.map_or("100%".to_string(), |s| format!("{}%", s));
 
                     format_indicator(
-                        self.config.indicator_format,
+                        SettingsFormat::Icon,
                         icon_type,
                         text(strength_text).into(),
                         state,
                     )
-                    .on_right_press(Message::OpenMore)
                     .into()
                 } else {
                     format_indicator(
-                        self.config.indicator_format,
+                        SettingsFormat::Icon,
                         StaticIcon::Wifi0,
                         text("0%").into(),
                         IndicatorState::Normal,
                     )
-                    .on_right_press(Message::OpenMore)
                     .into()
                 })
             }
@@ -386,7 +359,7 @@ impl NetworkSettings {
                         active_connection.map(|(name, _, _)| name.to_string()),
                         service.wifi_enabled,
                         Message::ToggleWiFi,
-                        Some(Message::OpenMore),
+                        None,
                         Some((SubMenu::Wifi, sub_menu, Message::ToggleWifiMenu))
                             .filter(|_| service.wifi_enabled),
                     ),
@@ -398,7 +371,6 @@ impl NetworkSettings {
                                 id,
                                 active_connection
                                     .map(|(name, strength, _)| (name.as_str(), *strength)),
-                                self.config.wifi_more_cmd.is_some(),
                             )
                         }),
                 ))
@@ -460,7 +432,7 @@ impl NetworkSettings {
                             } else {
                                 Message::ToggleVPNMenu
                             },
-                            Some(Message::OpenMore),
+                            None,
                             if !actives.is_empty() {
                                 Some((SubMenu::Vpn, sub_menu, Message::ToggleVPNMenu))
                             } else {
@@ -491,7 +463,7 @@ impl NetworkSettings {
                         None,
                         service.airplane_mode,
                         Message::ToggleAirplaneMode,
-                        Some(Message::OpenMore),
+                        None,
                         None,
                     ),
                     None,
@@ -504,7 +476,6 @@ impl NetworkSettings {
         service: &'a NetworkService,
         id: SurfaceId,
         active_connection: Option<(&str, u8)>,
-        show_more_button: bool,
     ) -> Element<'a, Message> {
         let (space, font_size) = use_theme(|t| (t.space, t.font_size));
         let main = column!(
@@ -590,19 +561,7 @@ impl NetworkSettings {
         )
         .spacing(space.xs);
 
-        if show_more_button {
-            column!(
-                main,
-                divider(),
-                styled_button(t!("settings-more"))
-                    .on_press(Message::WiFiMore(id))
-                    .width(Length::Fill)
-            )
-            .spacing(space.sm)
-            .into()
-        } else {
-            main.into()
-        }
+        main.into()
     }
 
     fn vpn_menu<'a>(

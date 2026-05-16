@@ -1,5 +1,5 @@
 use crate::{
-    config::{WindowTitleConfig, WindowTitleMode},
+    config::WindowTitleConfig,
     services::{ReadOnlyService, ServiceEvent, compositor::CompositorService},
     theme::use_theme,
     utils::truncate_text,
@@ -55,24 +55,7 @@ impl WindowTitle {
     fn recalculate_value(&mut self) {
         if let Some(service) = &self.service {
             self.value = service.active_window.as_ref().map(|w| {
-                let raw_title = match self.config.mode {
-                    WindowTitleMode::Title => w.title(),
-                    WindowTitleMode::Class => w.class(),
-                    WindowTitleMode::InitialTitle => match w.initial_title() {
-                        Ok(v) => v,
-                        Err(e) => {
-                            log::warn!("{}", e);
-                            ""
-                        }
-                    },
-                    WindowTitleMode::InitialClass => match w.initial_class() {
-                        Ok(v) => v,
-                        Err(e) => {
-                            log::warn!("{}", e);
-                            ""
-                        }
-                    },
-                };
+                let raw_title = w.title();
 
                 // Apply hard limit of 2048 characters to prevent Wayland E2BIG errors
                 let max_length = if self.config.truncate_title_after_length > 0 {

@@ -12,7 +12,6 @@ use iced::{
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum MenuType {
-    Updates,
     Settings,
     SystemInfo,
     Clock,
@@ -199,7 +198,7 @@ impl App {
         )
         .padding({
             let v_padding = match bar_style {
-                AppearanceStyle::Solid | AppearanceStyle::Gradient => 2,
+                AppearanceStyle::Solid => 2,
                 AppearanceStyle::Islands => 0,
             };
 
