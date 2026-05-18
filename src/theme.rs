@@ -11,6 +11,7 @@ use iced::{
     theme::{Palette, palette},
     widget::{
         button::{self, Status},
+        container::{self},
         text_input::{self},
     },
 };
@@ -528,38 +529,15 @@ impl AshellTheme {
     ) -> impl Fn(&Theme, Status) -> button::Style + use<> {
         let radius_lg = self.radius.lg;
         let opacity = self.opacity;
-        move |theme: &Theme, status: Status| {
-            let mut base = button::Style {
-                background: None,
-                border: Border {
-                    width: 0.0,
-                    radius: radius_lg.into(),
-                    color: Color::TRANSPARENT,
-                },
-                text_color: if is_active {
-                    theme.extended_palette().primary.base.text
-                } else {
-                    theme.palette().text
-                },
-                ..button::Style::default()
-            };
-            match status {
-                Status::Active => base,
-                Status::Hovered => {
-                    base.background = Some(
-                        theme
-                            .extended_palette()
-                            .background
-                            .weak
-                            .color
-                            .scale_alpha(opacity)
-                            .into(),
-                    );
-                    base.text_color = theme.palette().text;
-                    base
-                }
-                _ => base,
-            }
+        move |theme: &Theme, status: Status| button::Style {
+            background: None,
+            border: Border {
+                width: 0.0,
+                radius: radius_lg.into(),
+                color: Color::TRANSPARENT,
+            },
+            text_color: theme.palette().text,
+            ..button::Style::default()
         }
     }
 
@@ -569,46 +547,53 @@ impl AshellTheme {
     ) -> impl Fn(&Theme, Status) -> button::Style + use<> {
         let radius_xl = self.radius.xl;
         let opacity = self.opacity;
-        move |theme: &Theme, status: Status| {
-            let mut base = button::Style {
-                background: Some(
-                    if is_active {
-                        theme.palette().primary
-                    } else {
-                        theme.extended_palette().background.weak.color
-                    }
+        move |theme: &Theme, _status: Status| button::Style {
+            background: Some(
+                theme
+                    .extended_palette()
+                    .background
+                    .weak
+                    .color
                     .scale_alpha(opacity)
                     .into(),
-                ),
-                border: Border {
-                    width: 0.0,
-                    radius: radius_xl.into(),
-                    color: Color::TRANSPARENT,
-                },
-                text_color: if is_active {
-                    theme.extended_palette().primary.base.text
+            ),
+            border: Border {
+                width: 0.0,
+                radius: radius_xl.into(),
+                color: Color::TRANSPARENT,
+            },
+            text_color: theme.palette().text,
+            ..button::Style::default()
+        }
+    }
+
+    pub fn quick_settings_icon_container_style(
+        &self,
+        is_active: bool,
+    ) -> impl Fn(&Theme) -> container::Style + use<> {
+        let radius_xl = self.radius.xl;
+        let opacity = self.opacity;
+        move |theme: &Theme| container::Style {
+            background: Some(
+                if is_active {
+                    theme.palette().primary
                 } else {
-                    theme.palette().text
-                },
-                ..button::Style::default()
-            };
-            match status {
-                Status::Active => base,
-                Status::Hovered => {
-                    let peach = theme.extended_palette().primary.weak.color;
-                    base.background = Some(
-                        if is_active {
-                            peach
-                        } else {
-                            theme.extended_palette().background.strong.color
-                        }
-                        .scale_alpha(opacity)
-                        .into(),
-                    );
-                    base
+                    theme.extended_palette().background.weak.color
                 }
-                _ => base,
-            }
+                .scale_alpha(opacity)
+                .into(),
+            ),
+            border: Border {
+                width: 0.0,
+                radius: (16.).into(),
+                color: Color::TRANSPARENT,
+            },
+            text_color: Some(if is_active {
+                theme.extended_palette().primary.base.text
+            } else {
+                theme.palette().text
+            }),
+            ..container::Style::default()
         }
     }
 

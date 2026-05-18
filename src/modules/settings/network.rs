@@ -460,7 +460,13 @@ impl NetworkSettings {
                     quick_setting_button(
                         Self::airplane_mode_icon(service.airplane_mode),
                         t!("settings-network-airplane-mode"),
-                        None,
+                        Some(
+                            match service.airplane_mode {
+                                true => "On",
+                                false => "Off",
+                            }
+                            .to_string(),
+                        ),
                         service.airplane_mode,
                         Message::ToggleAirplaneMode,
                         None,

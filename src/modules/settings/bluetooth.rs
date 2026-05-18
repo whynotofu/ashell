@@ -194,7 +194,16 @@ impl BluetoothSettings {
                         StaticIcon::BluetoothOff
                     },
                     t!("settings-bluetooth"),
-                    device_name,
+                    match device_name {
+                        Some(..) => device_name,
+                        None => Some(
+                            match service.state == BluetoothState::Active {
+                                true => "On",
+                                false => "Off",
+                            }
+                            .to_string(),
+                        ),
+                    },
                     service.state == BluetoothState::Active,
                     Message::Toggle,
                     Some(Message::OpenMore),

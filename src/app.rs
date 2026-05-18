@@ -79,6 +79,7 @@ pub enum Message {
     ResumeFromSleep,
     None,
     ToggleVisibility,
+    SaveState,
 }
 
 impl App {
@@ -392,6 +393,11 @@ impl App {
                         .collect::<Vec<_>>(),
                 )
             }
+            Message::SaveState => {
+                self.settings.save_state();
+                println!("Saving state.");
+                Task::Iced(iced_runtime::exit())
+            }
         }
     }
 
@@ -489,6 +495,17 @@ impl App {
                 _ => Message::None,
             }),
             iced::output_events().map(Message::OutputEvent),
+            Subscription::run(|| {
+                use iced::futures::StreamExt;
+                signal_hook_tokio::Signals::new([libc::SIGTERM, libc::SIGINT])
+                    .expect("Failed to create signal stream")
+                    .filter_map(|sig| {
+                        iced::futures::future::ready(match sig {
+                            libc::SIGTERM | libc::SIGINT => Some(Message::SaveState),
+                            _ => None,
+                        })
+                    })
+            }),
             // Always subscribe to audio/brightness services so OSD works
             // even when the Settings module isn't in the module list.
             self.settings.subscription().map(Message::Settings),

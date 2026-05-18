@@ -7,10 +7,12 @@ use crate::{
     config::{Position, SettingsIndicator, SettingsModuleConfig},
     modules::settings::{
         audio::{AudioSettings, AudioSettingsConfig},
+        battery::BatterySettings,
         bluetooth::{BluetoothSettings, BluetoothSettingsConfig},
         brightness::{BrightnessSettings, BrightnessSettingsConfig},
         network::{NetworkSettings, NetworkSettingsConfig},
         power::{PowerSettings, PowerSettingsConfig},
+        state::State,
     },
     osd,
     services::idle_inhibitor::IdleInhibitorManager,
@@ -23,10 +25,12 @@ use iced::{
 };
 
 pub(crate) mod audio;
+mod battery;
 mod bluetooth;
 pub(crate) mod brightness;
 pub(crate) mod network;
 mod power;
+mod state;
 
 pub struct Settings {
     lock_cmd: Option<String>,
@@ -39,6 +43,7 @@ pub struct Settings {
     sub_menu: Option<SubMenu>,
     network_dialog: Option<NetworkDialogState>,
     network_dialog_show_password: bool,
+    battery: BatterySettings,
     indicators: Vec<SettingsIndicator>,
 }
 
@@ -86,6 +91,7 @@ pub enum Message {
     PasswordDialog(password_dialog::Message),
     MenuOpened,
     ConfigReloaded(SettingsModuleConfig),
+    Battery(battery::Message),
 }
 
 pub enum Action {
@@ -182,7 +188,17 @@ impl Settings {
         Action::None
     }
 
+    pub fn save_state(&mut self) {
+        State {
+            battery_protection: self.battery.state,
+            audio_state: self.audio.get_audio_state(),
+        }
+        .save()
+    }
+
     pub fn new(config: SettingsModuleConfig) -> Self {
+        let state = State::load();
+
         Settings {
             lock_cmd: config.lock_cmd,
             power: PowerSettings::new(PowerSettingsConfig::new(
@@ -197,7 +213,10 @@ impl Settings {
                 config.peripheral_battery_format,
                 config.peripheral_expanded_by_default,
             )),
-            audio: AudioSettings::new(AudioSettingsConfig::new(config.audio_step)),
+            audio: AudioSettings::new(
+                AudioSettingsConfig::new(config.audio_step),
+                state.audio_state,
+            ),
             brightness: BrightnessSettings::new(BrightnessSettingsConfig::new(
                 config.brightness_step,
             )),
@@ -215,6 +234,7 @@ impl Settings {
             },
             sub_menu: None,
             network_dialog: None,
+            battery: BatterySettings::new(state.battery_protection),
             indicators: config.indicators,
             network_dialog_show_password: false,
         }
@@ -234,6 +254,10 @@ impl Settings {
                 }
                 power::Action::Command(task) => Action::Command(task.map(Message::Power)),
             },
+            Message::Battery(msg) => {
+                let _ = self.battery.update(msg);
+                Action::None
+            }
             Message::Audio(msg) => match self.audio.update(msg) {
                 audio::Action::None => Action::None,
                 audio::Action::ToggleSinksMenu => {
@@ -541,9 +565,15 @@ impl Settings {
                                 IdleInhibitorManager::idle_inhibitor_icon(
                                     idle_inhibitor.is_inhibited(),
                                 ),
-                                t!("settings-idle-inhibitor"),
-                                None,
-                                idle_inhibitor.is_inhibited(),
+                                "Display Power Saver".to_string(),
+                                Some(
+                                    match !idle_inhibitor.is_inhibited() {
+                                        true => "On",
+                                        false => "Off",
+                                    }
+                                    .to_string(),
+                                ),
+                                !idle_inhibitor.is_inhibited(),
                                 Message::ToggleInhibitIdle,
                                 None,
                                 None,
@@ -557,6 +587,14 @@ impl Settings {
                             submenu.map(|e| e.map(Message::Power)),
                         )
                     }),
+                    self.battery
+                        .quick_setting_button()
+                        .map(|(button, submenu)| {
+                            (
+                                button.map(Message::Battery),
+                                submenu.map(|e| e.map(Message::Battery)),
+                            )
+                        }),
                 ]
                 .into_iter()
                 .flatten()

@@ -466,13 +466,13 @@ impl PowerSettings {
                 Some((
                     quick_setting_button(
                         convert::Into::<StaticIcon>::into(service.power_profile),
-                        match service.power_profile {
+                        "Power Profile".to_string(),
+                        Some(match service.power_profile {
                             PowerProfile::Balanced => t!("settings-power-profile-balanced"),
                             PowerProfile::Performance => t!("settings-power-profile-performance"),
                             PowerProfile::PowerSaver => t!("settings-power-profile-power-saver"),
                             PowerProfile::Unknown => String::new(),
-                        },
-                        None,
+                        }),
                         true,
                         Message::TogglePowerProfile,
                         None,

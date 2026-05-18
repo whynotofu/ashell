@@ -6,6 +6,7 @@ use crate::{
         slider_control, styled_button,
     },
     config::SettingsFormat,
+    modules::settings::state::AudioState,
     osd,
     services::{
         ReadOnlyService, Service, ServiceEvent,
@@ -13,8 +14,10 @@ use crate::{
     },
     t,
     theme::use_theme,
-    utils::IndicatorState,
-    utils::remote_value::{self, Remote},
+    utils::{
+        IndicatorState,
+        remote_value::{self, Remote},
+    },
 };
 use iced::{
     Alignment, Element, Length, Subscription, Task, Theme,
@@ -61,6 +64,7 @@ impl AudioSettingsConfig {
 pub struct AudioSettings {
     config: AudioSettingsConfig,
     service: Option<AudioService>,
+    state: Option<AudioState>,
 }
 
 pub struct SubmenuEntry<RMessage> {
@@ -77,10 +81,11 @@ pub enum SliderType {
 }
 
 impl AudioSettings {
-    pub fn new(config: AudioSettingsConfig) -> Self {
+    pub fn new(config: AudioSettingsConfig, state: Option<AudioState>) -> Self {
         Self {
             config,
             service: None,
+            state,
         }
     }
 
@@ -92,6 +97,17 @@ impl AudioSettings {
 
     pub fn vol_max() -> u32 {
         Volume::NORMAL.0
+    }
+
+    pub fn get_audio_state(&self) -> Option<AudioState> {
+        if let Some(service) = &self.service {
+            Some(AudioState {
+                volume: service.sink_slider.value() / VOL_PERCENT,
+                microphone_volume: service.source_slider.value() / VOL_PERCENT,
+            })
+        } else {
+            None
+        }
     }
 
     pub fn volume_adjust(&mut self, up: bool) -> Action {
