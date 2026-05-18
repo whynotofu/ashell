@@ -1,4 +1,4 @@
-use crate::config::{Position, get_config};
+use crate::config::get_config;
 use crate::outputs::Outputs;
 use app::App;
 use clap::Parser;
@@ -138,11 +138,7 @@ fn main() -> iced::Result {
         App::view,
     )
     .layer_shell(LayerShellSettings {
-        anchor: match config.position {
-            Position::Top => Anchor::TOP,
-            Position::Bottom => Anchor::BOTTOM,
-        } | Anchor::LEFT
-            | Anchor::RIGHT,
+        anchor: Anchor::TOP | Anchor::LEFT | Anchor::RIGHT,
         layer: iced_layer,
         exclusive_zone: height as i32,
         size: Some((0, height as u32)),

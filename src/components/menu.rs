@@ -1,6 +1,6 @@
 use crate::app::{self, App};
 use crate::components::{self, ButtonUIRef};
-use crate::config::{AppearanceStyle, Position};
+use crate::config::AppearanceStyle;
 use crate::theme::{backdrop_color, use_theme};
 use iced::alignment::Vertical;
 use iced::widget::container::Style;
@@ -163,17 +163,15 @@ impl App {
         content: Element<'a, app::Message>,
         button_ui_ref: ButtonUIRef,
     ) -> Element<'a, app::Message> {
-        let (space, menu_opacity, radius, bar_style, bar_position, menu_backdrop) =
-            use_theme(|t| {
-                (
-                    t.space,
-                    t.menu.opacity,
-                    t.radius,
-                    t.bar_style,
-                    t.bar_position,
-                    t.menu.backdrop,
-                )
-            });
+        let (space, menu_opacity, radius, bar_style, menu_backdrop) = use_theme(|t| {
+            (
+                t.space,
+                t.menu.opacity,
+                t.radius,
+                t.bar_style,
+                t.menu.backdrop,
+            )
+        });
 
         components::MenuWrapper::new(
             button_ui_ref.position.x,
@@ -202,22 +200,9 @@ impl App {
                 AppearanceStyle::Islands => 0,
             };
 
-            Padding::new(0.)
-                .top(if bar_position == Position::Top {
-                    v_padding
-                } else {
-                    0
-                })
-                .bottom(if bar_position == Position::Bottom {
-                    v_padding
-                } else {
-                    0
-                })
+            Padding::new(0.).top(v_padding).bottom(0)
         })
-        .align_y(match bar_position {
-            Position::Top => Vertical::Top,
-            Position::Bottom => Vertical::Bottom,
-        })
+        .align_y(Vertical::Top)
         .backdrop(backdrop_color(menu_backdrop))
         .on_click_outside(app::Message::CloseMenu(id))
         .into()

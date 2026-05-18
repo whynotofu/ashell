@@ -89,12 +89,11 @@ impl App {
         move || {
             let outputs = Outputs::new(
                 config.appearance.style,
-                config.position,
                 config.layer,
                 config.appearance.scale_factor,
             );
 
-            init_theme(AshellTheme::new(config.position, &config.appearance));
+            init_theme(AshellTheme::new(&config.appearance));
             init_localizer(resolve_localizer(&config));
 
             (
@@ -124,7 +123,7 @@ impl App {
     }
 
     fn refresh_config(&mut self, config: Box<Config>) {
-        init_theme(AshellTheme::new(config.position, &config.appearance));
+        init_theme(AshellTheme::new(&config.appearance));
         init_localizer(resolve_localizer(&config));
         self.general_config = GeneralConfig {
             outputs: config.outputs,
@@ -179,10 +178,8 @@ impl App {
                     "Current outputs: {:?}, new outputs: {:?}",
                     self.general_config.outputs, config.outputs
                 );
-                let (bar_position, bar_style, scale_factor) =
-                    use_theme(|t| (t.bar_position, t.bar_style, t.scale_factor));
+                let (bar_style, scale_factor) = use_theme(|t| (t.bar_style, t.scale_factor));
                 if self.general_config.outputs != config.outputs
-                    || bar_position != config.position
                     || bar_style != config.appearance.style
                     || scale_factor != config.appearance.scale_factor
                     || self.general_config.layer != config.layer
@@ -191,7 +188,6 @@ impl App {
                     tasks.push(self.outputs.sync(
                         config.appearance.style,
                         &config.outputs,
-                        config.position,
                         config.layer,
                         config.appearance.scale_factor,
                     ));
@@ -291,12 +287,10 @@ impl App {
                         self.outputs.set_output_logical_height(info.id, h as u32);
                     }
 
-                    let (bar_style, bar_position, scale_factor) =
-                        use_theme(|t| (t.bar_style, t.bar_position, t.scale_factor));
+                    let (bar_style, scale_factor) = use_theme(|t| (t.bar_style, t.scale_factor));
                     self.outputs.add(
                         bar_style,
                         &self.general_config.outputs,
-                        bar_position,
                         self.general_config.layer,
                         name,
                         info.id,
@@ -305,11 +299,9 @@ impl App {
                 }
                 OutputEvent::Removed(output_id) => {
                     info!("Output destroyed");
-                    let (bar_style, bar_position, scale_factor) =
-                        use_theme(|t| (t.bar_style, t.bar_position, t.scale_factor));
+                    let (bar_style, scale_factor) = use_theme(|t| (t.bar_style, t.scale_factor));
                     self.outputs.remove(
                         bar_style,
-                        bar_position,
                         self.general_config.layer,
                         output_id,
                         scale_factor,
@@ -318,12 +310,10 @@ impl App {
                 OutputEvent::InfoChanged(_) => Task::none(),
             },
             Message::ResumeFromSleep => {
-                let (bar_style, bar_position, scale_factor) =
-                    use_theme(|t| (t.bar_style, t.bar_position, t.scale_factor));
+                let (bar_style, scale_factor) = use_theme(|t| (t.bar_style, t.scale_factor));
                 self.outputs.sync(
                     bar_style,
                     &self.general_config.outputs,
-                    bar_position,
                     self.general_config.layer,
                     scale_factor,
                 )
@@ -463,9 +453,7 @@ impl App {
                 match &open_menu.menu_type {
                     MenuType::Settings => self.menu_wrapper(
                         id,
-                        self.settings
-                            .menu_view(id, use_theme(|t| t.bar_position))
-                            .map(Message::Settings),
+                        self.settings.menu_view(id).map(Message::Settings),
                         ui_ref,
                     ),
                     MenuType::SystemInfo => self.menu_wrapper(

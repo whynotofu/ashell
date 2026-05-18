@@ -2,9 +2,7 @@ use std::cell::RefCell;
 
 use crate::{
     components::button::{ButtonHierarchy, ButtonKind},
-    config::{
-        Appearance, AppearanceColor, AppearanceStyle, BackgroundLevel, MenuAppearance, Position,
-    },
+    config::{Appearance, AppearanceColor, AppearanceStyle, BackgroundLevel, MenuAppearance},
 };
 use iced::{
     Background, Border, Color, Theme,
@@ -106,7 +104,6 @@ pub struct AshellTheme {
     pub space: Space,
     pub radius: Radius,
     pub font_size: FontSize,
-    pub bar_position: Position,
     pub bar_style: AppearanceStyle,
     pub opacity: f32,
     pub menu: MenuAppearance,
@@ -123,7 +120,6 @@ impl Default for AshellTheme {
             space: Space::default(),
             radius: Radius::default(),
             font_size: FontSize::default(),
-            bar_position: Position::default(),
             bar_style: appearance.style,
             opacity: appearance.opacity,
             menu: appearance.menu,
@@ -238,12 +234,11 @@ impl Default for AshellTheme {
 }
 
 impl AshellTheme {
-    pub fn new(position: Position, appearance: &Appearance) -> Self {
+    pub fn new(appearance: &Appearance) -> Self {
         AshellTheme {
             space: Space::default(),
             radius: Radius::default(),
             font_size: FontSize::default(),
-            bar_position: position,
             bar_style: appearance.style,
             opacity: appearance.opacity,
             menu: appearance.menu,
@@ -525,11 +520,10 @@ impl AshellTheme {
 
     pub fn quick_settings_submenu_button_style(
         &self,
-        is_active: bool,
+        _is_active: bool,
     ) -> impl Fn(&Theme, Status) -> button::Style + use<> {
         let radius_lg = self.radius.lg;
-        let opacity = self.opacity;
-        move |theme: &Theme, status: Status| button::Style {
+        move |theme: &Theme, _status: Status| button::Style {
             background: None,
             border: Border {
                 width: 0.0,
@@ -543,7 +537,7 @@ impl AshellTheme {
 
     pub fn quick_settings_button_style(
         &self,
-        is_active: bool,
+        _is_active: bool,
     ) -> impl Fn(&Theme, Status) -> button::Style + use<> {
         let radius_xl = self.radius.xl;
         let opacity = self.opacity;
@@ -571,7 +565,6 @@ impl AshellTheme {
         &self,
         is_active: bool,
     ) -> impl Fn(&Theme) -> container::Style + use<> {
-        let radius_xl = self.radius.xl;
         let opacity = self.opacity;
         move |theme: &Theme| container::Style {
             background: Some(

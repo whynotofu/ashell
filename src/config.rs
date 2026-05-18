@@ -22,7 +22,6 @@ pub struct Config {
     pub log_level: String,
     pub language: Option<String>,
     pub region: Option<String>,
-    pub position: Position,
     pub layer: Layer,
     pub outputs: Outputs,
     pub modules: Modules,
@@ -41,7 +40,6 @@ impl Default for Config {
             log_level: "warn".to_owned(),
             language: None,
             region: None,
-            position: Position::default(),
             layer: Layer::default(),
             outputs: Outputs::default(),
             modules: Modules::default(),
@@ -490,13 +488,6 @@ impl Default for Appearance {
             special_workspace_colors: None,
         }
     }
-}
-
-#[derive(Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum Position {
-    #[default]
-    Top,
-    Bottom,
 }
 
 #[derive(Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]

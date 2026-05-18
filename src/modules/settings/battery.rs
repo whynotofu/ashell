@@ -18,18 +18,12 @@ pub enum Action {
 
 pub struct BatterySettings {
     charge: u8,
-    emulate_start_treshold: bool,
     pub state: BatteryProtectionState,
 }
 
 impl BatterySettings {
     pub fn new(state: BatteryProtectionState) -> Self {
-        let emulate_start_treshold = true; //if !file_exists
-        Self {
-            charge: 0,
-            emulate_start_treshold,
-            state,
-        }
+        Self { charge: 0, state }
     }
 
     pub fn update(&mut self, message: Message) -> Action {

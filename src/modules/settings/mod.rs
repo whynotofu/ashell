@@ -4,7 +4,7 @@ use crate::{
         icons::{StaticIcon, icon, icon_button},
         password_dialog, quick_setting_button, sub_menu_wrapper,
     },
-    config::{Position, SettingsIndicator, SettingsModuleConfig},
+    config::{SettingsIndicator, SettingsModuleConfig},
     modules::settings::{
         audio::{AudioSettings, AudioSettingsConfig},
         battery::BatterySettings,
@@ -16,7 +16,6 @@ use crate::{
     },
     osd,
     services::idle_inhibitor::IdleInhibitorManager,
-    t,
     theme::use_theme,
 };
 use iced::{
@@ -487,7 +486,7 @@ impl Settings {
         }
     }
 
-    pub fn menu_view<'a>(&'a self, id: SurfaceId, position: Position) -> Element<'a, Message> {
+    pub fn menu_view<'a>(&'a self, id: SurfaceId) -> Element<'a, Message> {
         let space = use_theme(|t| t.space);
         container(if let Some(dialog) = &self.network_dialog {
             password_dialog::view(
@@ -601,15 +600,6 @@ impl Settings {
                 .collect::<Vec<_>>(),
             );
 
-            let (top_sink_slider, bottom_sink_slider) = match position {
-                Position::Top => (sink_slider.map(|e| e.map(Message::Audio)), None),
-                Position::Bottom => (None, sink_slider.map(|e| e.map(Message::Audio))),
-            };
-            let (top_source_slider, bottom_source_slider) = match position {
-                Position::Top => (source_slider.map(|e| e.map(Message::Audio)), None),
-                Position::Bottom => (None, source_slider.map(|e| e.map(Message::Audio))),
-            };
-
             Column::with_capacity(11)
                 .push(header)
                 .push(
@@ -626,7 +616,7 @@ impl Settings {
                         .filter(|menu_type| *menu_type == SubMenu::Power)
                         .map(|_| sub_menu_wrapper(self.power.menu().map(Message::Power))),
                 )
-                .push(top_sink_slider)
+                .push(sink_slider.map(|e| e.map(Message::Audio)))
                 .push(
                     self.sub_menu
                         .filter(|menu_type| *menu_type == SubMenu::Sinks)
@@ -636,8 +626,7 @@ impl Settings {
                                 .map(|submenu| sub_menu_wrapper(submenu.map(Message::Audio)))
                         }),
                 )
-                .push(bottom_sink_slider)
-                .push(top_source_slider)
+                .push(source_slider.map(|e| e.map(Message::Audio)))
                 .push(
                     self.sub_menu
                         .filter(|menu_type| *menu_type == SubMenu::Sources)
@@ -647,7 +636,6 @@ impl Settings {
                                 .map(|submenu| sub_menu_wrapper(submenu.map(Message::Audio)))
                         }),
                 )
-                .push(bottom_source_slider)
                 .push(self.brightness.slider().map(|e| e.map(Message::Brightness)))
                 .push(quick_settings)
                 .spacing(space.md)

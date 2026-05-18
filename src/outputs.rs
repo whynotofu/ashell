@@ -1,6 +1,6 @@
 use iced::{
     Anchor, /* InputRegionRect,*/ KeyboardInteractivity, Layer, LayerShellSettings, OutputId,
-    SurfaceId, Task, destroy_layer_surface, new_layer_surface, set_anchor, set_exclusive_zone,
+    SurfaceId, Task, destroy_layer_surface, new_layer_surface, set_exclusive_zone,
     /*set_input_region,*/ set_keyboard_interactivity, set_size,
 };
 use log::debug;
@@ -9,13 +9,12 @@ use crate::{
     HEIGHT,
     components::ButtonUIRef,
     components::menu::{Menu, MenuType, OpenMenu},
-    config::{self, AppearanceStyle, Position},
+    config::{self, AppearanceStyle},
 };
 
 #[derive(Debug, Clone)]
 pub struct ShellInfo {
     pub id: SurfaceId,
-    pub position: Position,
     pub layer: config::Layer,
     pub style: AppearanceStyle,
     pub menu: Menu,
@@ -58,12 +57,7 @@ impl Outputs {
         self.0.iter()
     }
 
-    pub fn new(
-        style: AppearanceStyle,
-        position: Position,
-        layer: config::Layer,
-        scale_factor: f64,
-    ) -> Self {
+    pub fn new(style: AppearanceStyle, layer: config::Layer, scale_factor: f64) -> Self {
         // Use the initial surface created by .layer_shell() in main.rs as a
         // fallback until real outputs are detected. Menu surfaces are created
         // on demand when a menu is opened.
@@ -74,7 +68,6 @@ impl Outputs {
                 menu: Menu::new(),
                 toast_id: None,
                 osd_id: None,
-                position,
                 layer,
                 style,
                 scale_factor,
@@ -96,7 +89,6 @@ impl Outputs {
     pub fn create_output_layers<Message: 'static>(
         style: AppearanceStyle,
         output_id: Option<OutputId>,
-        position: Position,
         layer: config::Layer,
         scale_factor: f64,
     ) -> (SurfaceId, Task<Message>) {
@@ -115,11 +107,7 @@ impl Outputs {
             keyboard_interactivity: KeyboardInteractivity::None,
             exclusive_zone: height as i32,
             output: output_id,
-            anchor: match position {
-                Position::Top => Anchor::TOP,
-                Position::Bottom => Anchor::BOTTOM,
-            } | Anchor::LEFT
-                | Anchor::RIGHT,
+            anchor: Anchor::TOP | Anchor::LEFT | Anchor::RIGHT,
             ..Default::default()
         });
 
@@ -175,7 +163,6 @@ impl Outputs {
         &mut self,
         style: AppearanceStyle,
         request_outputs: &config::Outputs,
-        position: Position,
         layer: config::Layer,
         name: &str,
         output_id: OutputId,
@@ -187,7 +174,7 @@ impl Outputs {
             debug!("Found target output, creating a new layer surface");
 
             let (id, task) =
-                Self::create_output_layers(style, Some(output_id), position, layer, scale_factor);
+                Self::create_output_layers(style, Some(output_id), layer, scale_factor);
 
             let destroy_task = match self.0.iter().position(|(key, _, _)| key.as_str() == name) {
                 Some(index) => {
@@ -208,7 +195,6 @@ impl Outputs {
                     menu: Menu::new(),
                     toast_id: None,
                     osd_id: None,
-                    position,
                     layer,
                     style,
                     scale_factor,
@@ -247,7 +233,6 @@ impl Outputs {
     pub fn remove<Message: 'static>(
         &mut self,
         style: AppearanceStyle,
-        position: Position,
         layer: config::Layer,
         output_id: OutputId,
         scale_factor: f64,
@@ -279,8 +264,7 @@ impl Outputs {
                 } else {
                     debug!("No outputs left, creating a fallback layer surface");
 
-                    let (id, task) =
-                        Self::create_output_layers(style, None, position, layer, scale_factor);
+                    let (id, task) = Self::create_output_layers(style, None, layer, scale_factor);
 
                     self.0.push((
                         "Fallback".to_string(),
@@ -289,7 +273,6 @@ impl Outputs {
                             menu: Menu::new(),
                             toast_id: None,
                             osd_id: None,
-                            position,
                             layer,
                             style,
                             scale_factor,
@@ -309,7 +292,6 @@ impl Outputs {
         &mut self,
         style: AppearanceStyle,
         request_outputs: &config::Outputs,
-        position: Position,
         layer: config::Layer,
         scale_factor: f64,
     ) -> Task<Message> {
@@ -348,7 +330,6 @@ impl Outputs {
                 tasks.push(self.add(
                     style,
                     request_outputs,
-                    position,
                     layer,
                     name.as_str(),
                     output_id,
@@ -358,31 +339,7 @@ impl Outputs {
         }
 
         for output_id in to_remove {
-            tasks.push(self.remove(style, position, layer, output_id, scale_factor));
-        }
-
-        for shell_info in self.0.iter_mut().filter_map(|(_, shell_info, _)| {
-            if let Some(shell_info) = shell_info
-                && shell_info.position != position
-            {
-                Some(shell_info)
-            } else {
-                None
-            }
-        }) {
-            debug!(
-                "Repositioning output: {:?}, new position {:?}",
-                shell_info.id, position
-            );
-            shell_info.position = position;
-            tasks.push(set_anchor(
-                shell_info.id,
-                match position {
-                    Position::Top => Anchor::TOP,
-                    Position::Bottom => Anchor::BOTTOM,
-                } | Anchor::LEFT
-                    | Anchor::RIGHT,
-            ));
+            tasks.push(self.remove(style, layer, output_id, scale_factor));
         }
 
         // Handle layer changes - only recreate surfaces when layer actually changes
@@ -394,7 +351,7 @@ impl Outputs {
                 let destroy_task = old.destroy_surfaces();
 
                 let (id, create_task) =
-                    Self::create_output_layers(style, *output_id, position, layer, scale_factor);
+                    Self::create_output_layers(style, *output_id, layer, scale_factor);
 
                 shell_info.id = id;
                 shell_info.menu = Menu::new();
