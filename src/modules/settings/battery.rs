@@ -1,9 +1,7 @@
 use crate::{
     components::{format_indicator, icons::StaticIcon, quick_setting_button},
     config::SettingsFormat,
-    modules::settings::state::{
-        BatteryProtectionLastState, BatteryProtectionMode, BatteryProtectionState,
-    },
+    modules::settings::state::{BatteryProtectionMode, BatteryProtectionState},
 };
 use iced::{Element, widget::text};
 

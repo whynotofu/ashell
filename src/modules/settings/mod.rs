@@ -10,8 +10,10 @@ use crate::{
         battery::BatterySettings,
         bluetooth::{BluetoothSettings, BluetoothSettingsConfig},
         brightness::{BrightnessSettings, BrightnessSettingsConfig},
+        keyboard_backlight::KeyboardBacklightSettings,
         network::{NetworkSettings, NetworkSettingsConfig},
         power::{PowerSettings, PowerSettingsConfig},
+        screen_lock::ScreenLockSettings,
         state::State,
     },
     osd,
@@ -27,8 +29,10 @@ pub(crate) mod audio;
 mod battery;
 mod bluetooth;
 pub(crate) mod brightness;
+mod keyboard_backlight;
 pub(crate) mod network;
 mod power;
+mod screen_lock;
 mod state;
 
 pub struct Settings {
@@ -39,6 +43,8 @@ pub struct Settings {
     network: NetworkSettings,
     bluetooth: BluetoothSettings,
     idle_inhibitor: Option<IdleInhibitorManager>,
+    keyboard_backlight: KeyboardBacklightSettings,
+    screen_lock: ScreenLockSettings,
     sub_menu: Option<SubMenu>,
     network_dialog: Option<NetworkDialogState>,
     network_dialog_show_password: bool,
@@ -84,6 +90,8 @@ pub enum Message {
     Audio(audio::Message),
     Brightness(brightness::Message),
     ToggleInhibitIdle,
+    KeyboardBacklight(keyboard_backlight::Message),
+    ScreenLock(screen_lock::Message),
     Lock,
     Power(power::Message),
     ToggleSubMenu(SubMenu),
@@ -231,6 +239,8 @@ impl Settings {
             } else {
                 IdleInhibitorManager::new()
             },
+            keyboard_backlight: KeyboardBacklightSettings::new(),
+            screen_lock: ScreenLockSettings::new(),
             sub_menu: None,
             network_dialog: None,
             battery: BatterySettings::new(state.battery_protection),
@@ -255,6 +265,14 @@ impl Settings {
             },
             Message::Battery(msg) => {
                 let _ = self.battery.update(msg);
+                Action::None
+            }
+            Message::KeyboardBacklight(msg) => {
+                let _ = self.keyboard_backlight.update(msg);
+                Action::None
+            }
+            Message::ScreenLock(msg) => {
+                let _ = self.screen_lock.update(msg);
                 Action::None
             }
             Message::Audio(msg) => match self.audio.update(msg) {
@@ -498,6 +516,7 @@ impl Settings {
             )
             .map(Message::PasswordDialog)
         } else {
+            //Show only if hidden in bar!
             let battery_data = self
                 .power
                 .battery_menu_indicator()
@@ -527,18 +546,16 @@ impl Settings {
 
             let (sink_slider, source_slider) = self.audio.sliders(self.sub_menu);
 
-            let wifi_setting_button = self
-                .network
-                .wifi_quick_setting_button(id, self.sub_menu)
-                .map(|(button, submenu)| {
-                    (
-                        button.map(Message::Network),
-                        submenu.map(|e| e.map(Message::Network)),
-                    )
-                });
             let quick_settings = quick_settings_section(
                 vec![
-                    wifi_setting_button,
+                    self.network
+                        .wifi_quick_setting_button(id, self.sub_menu)
+                        .map(|(button, submenu)| {
+                            (
+                                button.map(Message::Network),
+                                submenu.map(|e| e.map(Message::Network)),
+                            )
+                        }),
                     self.bluetooth.quick_setting_button(id, self.sub_menu).map(
                         |(button, submenu)| {
                             (
@@ -567,7 +584,7 @@ impl Settings {
                                 "Display Power Saver".to_string(),
                                 Some(
                                     match !idle_inhibitor.is_inhibited() {
-                                        true => "On",
+                                        true => "5 minutes",
                                         false => "Off",
                                     }
                                     .to_string(),
@@ -592,6 +609,22 @@ impl Settings {
                             (
                                 button.map(Message::Battery),
                                 submenu.map(|e| e.map(Message::Battery)),
+                            )
+                        }),
+                    self.keyboard_backlight
+                        .quick_setting_button()
+                        .map(|(button, submenu)| {
+                            (
+                                button.map(Message::KeyboardBacklight),
+                                submenu.map(|e| e.map(Message::KeyboardBacklight)),
+                            )
+                        }),
+                    self.screen_lock
+                        .quick_setting_button()
+                        .map(|(button, submenu)| {
+                            (
+                                button.map(Message::ScreenLock),
+                                submenu.map(|e| e.map(Message::ScreenLock)),
                             )
                         }),
                 ]

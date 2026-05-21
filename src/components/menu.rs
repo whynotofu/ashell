@@ -136,7 +136,7 @@ impl MenuSize {
     pub fn size(&self) -> f32 {
         match self {
             MenuSize::Small => 250.,
-            MenuSize::Medium => 350.,
+            MenuSize::Medium => 350. + 40.,
             MenuSize::Large => 450.,
             MenuSize::XLarge => 650.,
         }
@@ -176,7 +176,7 @@ impl App {
         components::MenuWrapper::new(
             button_ui_ref.position.x,
             container(content)
-                .padding(space.md)
+                .padding(space.sm)
                 .style(move |theme: &Theme| Style {
                     background: Some(theme.palette().background.scale_alpha(menu_opacity).into()),
                     border: Border {
@@ -187,7 +187,7 @@ impl App {
                             .color
                             .scale_alpha(menu_opacity),
                         width: 1.,
-                        radius: radius.lg.into(),
+                        radius: radius.xl.into(),
                     },
                     ..Default::default()
                 })

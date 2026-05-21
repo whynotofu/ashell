@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-const STATE_FILE_PATH: &str = "~/.local/state/seashell.toml";
+const STATE_FILE_PATH: &str = "~/.local/state/clove.toml";
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 pub enum BatteryProtectionMode {
@@ -11,15 +11,8 @@ pub enum BatteryProtectionMode {
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug)]
-pub enum BatteryProtectionLastState {
-    Charging,
-    Charged,
-}
-
-#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 pub struct BatteryProtectionState {
     pub mode: BatteryProtectionMode,
-    pub last_state: BatteryProtectionLastState,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug)]
@@ -40,7 +33,6 @@ impl Default for State {
         Self {
             battery_protection: BatteryProtectionState {
                 mode: BatteryProtectionMode::On,
-                last_state: BatteryProtectionLastState::Charged,
             },
             audio_state: None,
         }

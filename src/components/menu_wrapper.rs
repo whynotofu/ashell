@@ -104,8 +104,8 @@ where
             |node, size| {
                 let content_size = node.size();
                 let x = f32::min(
-                    f32::max(self.x - content_size.width / 2.0, 8.),
-                    size.width - content_size.width - 8.,
+                    f32::max(self.x - content_size.width / 2.0, 4.),
+                    size.width - content_size.width - 4.,
                 );
                 let node = node.align(
                     iced::Alignment::Center,
