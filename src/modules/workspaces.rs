@@ -55,24 +55,13 @@ pub struct Workspaces {
     scroll_accumulator: f32,
 }
 
-fn calculate_ui_workspaces(
-    config: &WorkspacesModuleConfig,
-    state: &CompositorState,
-) -> Vec<UiWorkspace> {
+fn calculate_ui_workspaces(config: &WorkspacesModuleConfig, state: &CompositorState) -> Vec<UiWorkspace> {
     let active_id = state.active_workspace_id;
     let monitors = &state.monitors;
-    let monitor_order = monitors
-        .iter()
-        .enumerate()
-        .map(|(idx, monitor)| (monitor.name.clone(), idx))
-        .collect::<HashMap<_, _>>();
+    let monitor_order =
+        monitors.iter().enumerate().map(|(idx, monitor)| (monitor.name.clone(), idx)).collect::<HashMap<_, _>>();
 
-    let workspaces = state
-        .workspaces
-        .clone()
-        .into_iter()
-        .unique_by(|w| w.id)
-        .collect_vec();
+    let workspaces = state.workspaces.clone().into_iter().unique_by(|w| w.id).collect_vec();
 
     let mut result: Vec<UiWorkspace> = Vec::with_capacity(workspaces.len());
     let (special, normal): (Vec<_>, Vec<_>) = workspaces.into_iter().partition(|w| w.id < 0);
@@ -86,18 +75,10 @@ fn calculate_ui_workspaces(
             result.push(UiWorkspace {
                 id: w.id,
                 index: w.index,
-                name: w
-                    .name
-                    .split(":")
-                    .last()
-                    .map_or_else(|| "".to_string(), |s| s.to_owned()),
+                name: w.name.split(":").last().map_or_else(|| "".to_string(), |s| s.to_owned()),
                 monitor_id: w.monitor_id,
                 monitor: w.monitor.clone(),
-                displayed: if active {
-                    Displayed::Active
-                } else {
-                    Displayed::Hidden
-                },
+                displayed: if active { Displayed::Active } else { Displayed::Hidden },
                 windows: w.windows,
             });
         }
@@ -127,11 +108,7 @@ fn calculate_ui_workspaces(
 
         virtual_desktops.into_iter().for_each(|(id, vdesk)| {
             let idx = (id - 1) as usize;
-            let display_name = config
-                .workspace_names
-                .get(idx)
-                .cloned()
-                .unwrap_or_else(|| id.to_string());
+            let display_name = config.workspace_names.get(idx).cloned().unwrap_or_else(|| id.to_string());
 
             result.push(UiWorkspace {
                 id,
@@ -139,11 +116,7 @@ fn calculate_ui_workspaces(
                 name: display_name,
                 monitor_id: None,
                 monitor: "".to_string(),
-                displayed: if vdesk.active {
-                    Displayed::Active
-                } else {
-                    Displayed::Hidden
-                },
+                displayed: if vdesk.active { Displayed::Active } else { Displayed::Hidden },
                 windows: vdesk.windows,
             });
         });
@@ -151,12 +124,7 @@ fn calculate_ui_workspaces(
         for w in normal.iter() {
             let display_name = if w.id > 0 {
                 let idx = (w.id - 1) as usize;
-                config
-                    .workspace_names
-                    .get(idx)
-                    .cloned()
-                    .or_else(|| Some(w.name.clone()))
-                    .unwrap_or_else(|| w.id.to_string())
+                config.workspace_names.get(idx).cloned().or_else(|| Some(w.name.clone())).unwrap_or_else(|| w.id.to_string())
             } else {
                 w.name.clone()
             };
@@ -182,11 +150,7 @@ fn calculate_ui_workspaces(
 
     if config.enable_workspace_filling && !result.is_empty() {
         let existing_indices = result.iter().map(|w| w.index).collect_vec();
-        let mut max_index = *existing_indices
-            .iter()
-            .filter(|&&idx| idx > 0)
-            .max()
-            .unwrap_or(&0);
+        let mut max_index = *existing_indices.iter().filter(|&&idx| idx > 0).max().unwrap_or(&0);
 
         if let Some(max_cfg) = config.max_workspaces
             && max_cfg > max_index as u32
@@ -194,18 +158,12 @@ fn calculate_ui_workspaces(
             max_index = max_cfg as i32;
         }
 
-        let missing_indices: Vec<i32> = (1..=max_index)
-            .filter(|idx| !existing_indices.contains(idx))
-            .collect();
+        let missing_indices: Vec<i32> = (1..=max_index).filter(|idx| !existing_indices.contains(idx)).collect();
 
         for index in missing_indices {
             let display_name = if index > 0 {
                 let name_idx = (index - 1) as usize;
-                config
-                    .workspace_names
-                    .get(name_idx)
-                    .cloned()
-                    .unwrap_or_else(|| index.to_string())
+                config.workspace_names.get(name_idx).cloned().unwrap_or_else(|| index.to_string())
             } else {
                 index.to_string()
             };
@@ -227,10 +185,7 @@ fn calculate_ui_workspaces(
             let a_order = monitor_order.get(&a.monitor).copied().unwrap_or(usize::MAX);
             let b_order = monitor_order.get(&b.monitor).copied().unwrap_or(usize::MAX);
 
-            a_order
-                .cmp(&b_order)
-                .then(a.index.cmp(&b.index))
-                .then(a.id.cmp(&b.id))
+            a_order.cmp(&b_order).then(a.index.cmp(&b.index)).then(a.id.cmp(&b.id))
         });
     } else {
         result.sort_by(|a, b| a.index.cmp(&b.index).then(a.id.cmp(&b.id)));
@@ -269,23 +224,15 @@ impl Workspaces {
             }
             Message::ChangeWorkspace(id) => {
                 if let Some(service) = &mut self.service {
-                    let already_active = self
-                        .ui_workspaces
-                        .iter()
-                        .any(|w| w.displayed == Displayed::Active && w.id == id);
+                    let already_active = self.ui_workspaces.iter().any(|w| w.displayed == Displayed::Active && w.id == id);
 
                     if !already_active {
                         if self.config.enable_virtual_desktops {
                             return service
-                                .command(CompositorCommand::CustomDispatch(
-                                    "vdesk".to_string(),
-                                    id.to_string(),
-                                ))
+                                .command(CompositorCommand::CustomDispatch("vdesk".to_string(), id.to_string()))
                                 .map(Message::ServiceEvent);
                         } else {
-                            return service
-                                .command(CompositorCommand::FocusWorkspace(id))
-                                .map(Message::ServiceEvent);
+                            return service.command(CompositorCommand::FocusWorkspace(id)).map(Message::ServiceEvent);
                         }
                     }
                 }
@@ -297,11 +244,7 @@ impl Workspaces {
                 {
                     return service
                         .command(CompositorCommand::ToggleSpecialWorkspace(
-                            special
-                                .name
-                                .split(":")
-                                .last()
-                                .map_or_else(|| special.name.clone(), |s| s.to_string()),
+                            special.name.split(":").last().map_or_else(|| special.name.clone(), |s| s.to_string()),
                         ))
                         .map(Message::ServiceEvent);
                 }
@@ -317,11 +260,7 @@ impl Workspaces {
                         .map(Message::ServiceEvent);
                 }
                 return iced::Task::none();*/
-                let Some(pos) = self
-                    .ui_workspaces
-                    .iter()
-                    .position(|w| w.displayed == Displayed::Active)
-                else {
+                let Some(pos) = self.ui_workspaces.iter().position(|w| w.displayed == Displayed::Active) else {
                     return iced::Task::none();
                 };
 
@@ -330,8 +269,7 @@ impl Workspaces {
 
                 let restrict_to_monitor = matches!(
                     self.config.visibility_mode,
-                    WorkspaceVisibilityMode::MonitorSpecific
-                        | WorkspaceVisibilityMode::MonitorSpecificExclusive
+                    WorkspaceVisibilityMode::MonitorSpecific | WorkspaceVisibilityMode::MonitorSpecificExclusive
                 );
 
                 let in_current_group = |w: &&UiWorkspace| -> bool {
@@ -357,14 +295,9 @@ impl Workspaces {
                 // vector, which represents exact visual order regardless of
                 // group_by_monitor or visibility_mode configuration.
                 let next_workspace = if direction > 0 {
-                    self.ui_workspaces[..pos]
-                        .iter()
-                        .rev()
-                        .find(|w| in_current_group(w))
+                    self.ui_workspaces[..pos].iter().rev().find(|w| in_current_group(w))
                 } else {
-                    self.ui_workspaces[pos + 1..]
-                        .iter()
-                        .find(|w| in_current_group(w))
+                    self.ui_workspaces[pos + 1..].iter().find(|w| in_current_group(w))
                 };
 
                 if let Some(next) = next_workspace {
@@ -406,14 +339,11 @@ impl Workspaces {
                         let show = match self.config.visibility_mode {
                             WorkspaceVisibilityMode::All => true,
                             WorkspaceVisibilityMode::MonitorSpecific => {
-                                monitor_name
-                                    .unwrap_or_else(|| &w.monitor)
-                                    .contains(&w.monitor)
-                                    || !outputs.has_name(&w.monitor)
+                                monitor_name.unwrap_or_else(|| &w.monitor).contains(&w.monitor) || !outputs.has_name(&w.monitor)
                             }
-                            WorkspaceVisibilityMode::MonitorSpecificExclusive => monitor_name
-                                .unwrap_or_else(|| &w.monitor)
-                                .contains(&w.monitor),
+                            WorkspaceVisibilityMode::MonitorSpecificExclusive => {
+                                monitor_name.unwrap_or_else(|| &w.monitor).contains(&w.monitor)
+                            }
                         };
 
                         if show {
@@ -481,17 +411,13 @@ impl Workspaces {
                 iced::mouse::ScrollDelta::Lines { y, .. } => {
                     if y.is_sign_positive() {
                         match self.config.invert_scroll_direction {
-                            Some(InvertScrollDirection::All | InvertScrollDirection::Mouse) => {
-                                Message::Scroll(-1)
-                            }
+                            Some(InvertScrollDirection::All | InvertScrollDirection::Mouse) => Message::Scroll(-1),
                             Some(InvertScrollDirection::Trackpad) => Message::Scroll(1),
                             None => Message::Scroll(1),
                         }
                     } else {
                         match self.config.invert_scroll_direction {
-                            Some(InvertScrollDirection::All | InvertScrollDirection::Mouse) => {
-                                Message::Scroll(1)
-                            }
+                            Some(InvertScrollDirection::All | InvertScrollDirection::Mouse) => Message::Scroll(1),
                             Some(InvertScrollDirection::Trackpad) => Message::Scroll(-1),
                             None => Message::Scroll(-1),
                         }
@@ -504,17 +430,13 @@ impl Workspaces {
                         Message::ScrollAccumulator(y)
                     } else if self.scroll_accumulator.is_sign_positive() {
                         match self.config.invert_scroll_direction {
-                            Some(InvertScrollDirection::All | InvertScrollDirection::Trackpad) => {
-                                Message::Scroll(-1)
-                            }
+                            Some(InvertScrollDirection::All | InvertScrollDirection::Trackpad) => Message::Scroll(-1),
                             Some(InvertScrollDirection::Mouse) => Message::Scroll(1),
                             None => Message::Scroll(1),
                         }
                     } else {
                         match self.config.invert_scroll_direction {
-                            Some(InvertScrollDirection::All | InvertScrollDirection::Trackpad) => {
-                                Message::Scroll(1)
-                            }
+                            Some(InvertScrollDirection::All | InvertScrollDirection::Trackpad) => Message::Scroll(1),
                             Some(InvertScrollDirection::Mouse) => Message::Scroll(-1),
                             None => Message::Scroll(-1),
                         }

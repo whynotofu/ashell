@@ -122,13 +122,8 @@ impl<'a, Message: 'static + Clone> StyledButton<'a, Message> {
 
 impl<'a, Message: 'static + Clone> From<StyledButton<'a, Message>> for Element<'a, Message> {
     fn from(value: StyledButton<'a, Message>) -> Self {
-        let (space, font_size, button_style) = use_theme(|theme| {
-            (
-                theme.space,
-                theme.font_size,
-                theme.button_style(value.kind, value.hierarchy),
-            )
-        });
+        let (space, font_size, button_style) =
+            use_theme(|theme| (theme.space, theme.font_size, theme.button_style(value.kind, value.hierarchy)));
 
         let (padding, icon_size) = match value.size {
             ButtonSize::Small => ([space.xxs, space.sm], font_size.sm),
@@ -142,25 +137,17 @@ impl<'a, Message: 'static + Clone> From<StyledButton<'a, Message>> for Element<'
         };
 
         let content = match (icon_element, icon_position) {
-            (Some(icon_el), Some(IconPosition::Before)) => container(
-                row![icon_el, value.label]
-                    .spacing(space.xs)
-                    .align_y(Alignment::Center),
-            )
-            .into(),
+            (Some(icon_el), Some(IconPosition::Before)) => {
+                container(row![icon_el, value.label].spacing(space.xs).align_y(Alignment::Center)).into()
+            }
             (Some(icon_el), Some(IconPosition::After)) => container(
-                row![container(value.label).width(Length::Fill), icon_el,]
-                    .spacing(space.xs)
-                    .align_y(Alignment::Center),
+                row![container(value.label).width(Length::Fill), icon_el,].spacing(space.xs).align_y(Alignment::Center),
             )
             .into(),
             _ => value.label,
         };
 
-        let mut btn = button_fn(content)
-            .padding(padding)
-            .style(button_style)
-            .height(value.height.unwrap_or(Length::Shrink));
+        let mut btn = button_fn(content).padding(padding).style(button_style).height(value.height.unwrap_or(Length::Shrink));
 
         if let Some(width) = value.width {
             btn = btn.width(width);
@@ -176,9 +163,7 @@ impl<'a, Message: 'static + Clone> From<StyledButton<'a, Message>> for Element<'
     }
 }
 
-pub fn styled_button<'a, Message: 'static + Clone>(
-    content: impl IntoButtonContent<'a, Message>,
-) -> StyledButton<'a, Message> {
+pub fn styled_button<'a, Message: 'static + Clone>(content: impl IntoButtonContent<'a, Message>) -> StyledButton<'a, Message> {
     StyledButton {
         label: content.into_content(),
         icon: None,

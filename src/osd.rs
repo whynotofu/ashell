@@ -106,9 +106,7 @@ impl Osd {
                 OsdMessage::Microphone { muted, .. } => AudioSettings::microphone_icon(muted),
                 OsdMessage::Brightness { .. } => StaticIcon::Brightness,
                 OsdMessage::Airplane { active } => NetworkSettings::airplane_mode_icon(active),
-                OsdMessage::IdleInhibitor { active } => {
-                    IdleInhibitorManager::idle_inhibitor_icon(active)
-                }
+                OsdMessage::IdleInhibitor { active } => IdleInhibitorManager::idle_inhibitor_icon(active),
             };
 
             let detail: Element<'_, Message> = match message {
@@ -137,21 +135,15 @@ impl Osd {
                 }
             };
 
-            let content = row![
-                container(icon.to_text().size(font_size.xxl)).center_x(font_size.xxl),
-                detail,
-            ]
-            .spacing(space.sm)
-            .align_y(Alignment::Center);
+            let content = row![container(icon.to_text().size(font_size.xxl)).center_x(font_size.xxl), detail,]
+                .spacing(space.sm)
+                .align_y(Alignment::Center);
 
             container(content)
                 .padding([space.sm, space.md])
                 .style(move |t: &Theme| container::Style {
                     background: Some(t.palette().background.into()),
-                    border: Border::default()
-                        .width(1)
-                        .color(t.extended_palette().background.weakest.color)
-                        .rounded(radius.xl),
+                    border: Border::default().width(1).color(t.extended_palette().background.weakest.color).rounded(radius.xl),
                     text_color: Some(match message {
                         OsdMessage::IdleInhibitor { active: true } => t.palette().danger,
                         OsdMessage::Airplane { active: true } => t.palette().danger,

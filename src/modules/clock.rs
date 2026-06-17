@@ -89,8 +89,7 @@ impl Clock {
             }
             Message::NextFormat => {
                 if !self.config.formats.is_empty() {
-                    self.current_format_index =
-                        (self.current_format_index + 1) % self.config.formats.len();
+                    self.current_format_index = (self.current_format_index + 1) % self.config.formats.len();
                 }
                 Action::None
             }
@@ -119,21 +118,14 @@ impl Clock {
         let naive_utc_now = self.date.with_timezone(&Utc).naive_utc();
         let locale = chrono_locale();
 
-        let datetime_string = Local
-            .from_utc_datetime(&naive_utc_now)
-            .format_localized(format, locale)
-            .to_string();
+        let datetime_string = Local.from_utc_datetime(&naive_utc_now).format_localized(format, locale).to_string();
 
-        container(text(datetime_string))
-            .align_y(Vertical::Center)
-            .into()
+        container(text(datetime_string)).align_y(Vertical::Center).into()
     }
 
     pub fn menu_view<'a>(&'a self) -> Element<'a, Message> {
         //let space = use_theme(|t| t.space);
-        container(self.calendar())
-            .max_width(MenuSize::XLarge)
-            .into()
+        container(self.calendar()).max_width(MenuSize::XLarge).into()
     }
 
     fn calendar<'a>(&'a self) -> Element<'a, Message> {
@@ -148,9 +140,7 @@ impl Clock {
         let day_of_week_first_day = first_day_month.weekday();
 
         let mut current = first_day_month
-            .checked_sub_days(Days::new(
-                day_of_week_first_day.num_days_from_monday() as u64
-            ))
+            .checked_sub_days(Days::new(day_of_week_first_day.num_days_from_monday() as u64))
             .unwrap_or_default();
 
         let weeks_in_month = 6; /*if current
@@ -216,42 +206,32 @@ impl Clock {
                                             let day = current;
                                             current = current.succ_opt().unwrap_or(current);
 
-                                            let (background_color, text_color) =
-                                                match day == self.date.date_naive() {
-                                                    true => (
-                                                        theme.iced_theme.palette().primary,
-                                                        theme.iced_theme.palette().background,
-                                                    ),
-                                                    false => (
-                                                        theme.iced_theme.palette().background,
-                                                        theme.iced_theme.palette().text,
-                                                    ),
-                                                };
+                                            let (background_color, text_color) = match day == self.date.date_naive() {
+                                                true => {
+                                                    (theme.iced_theme.palette().primary, theme.iced_theme.palette().background)
+                                                }
+                                                false => {
+                                                    (theme.iced_theme.palette().background, theme.iced_theme.palette().text)
+                                                }
+                                            };
 
                                             if day.month0() == current_month.month0() {
                                                 button(
-                                                    text(
-                                                        day.format_localized("%-d", locale)
-                                                            .to_string(),
-                                                    )
-                                                    .align_x(Horizontal::Center),
+                                                    text(day.format_localized("%-d", locale).to_string())
+                                                        .align_x(Horizontal::Center),
                                                 )
-                                                .style(
-                                                    move |_t: &Theme, _status: button::Status| {
-                                                        button::Style {
-                                                            background: Some(Background::Color(
-                                                                background_color,
-                                                            )),
-                                                            text_color: text_color,
-                                                            border: Border {
-                                                                color: Color::TRANSPARENT,
-                                                                width: 0.,
-                                                                radius: (4.).into(), //*theme.iced_theme.radius.sm.into(),
-                                                            },
-                                                            ..Default::default()
-                                                        }
-                                                    },
-                                                )
+                                                .style(move |_t: &Theme, _status: button::Status| {
+                                                    button::Style {
+                                                        background: Some(Background::Color(background_color)),
+                                                        text_color: text_color,
+                                                        border: Border {
+                                                            color: Color::TRANSPARENT,
+                                                            width: 0.,
+                                                            radius: (4.).into(), //*theme.iced_theme.radius.sm.into(),
+                                                        },
+                                                        ..Default::default()
+                                                    }
+                                                })
                                                 .width(Length::Fill)
                                                 .into()
                                             } else {
@@ -303,10 +283,7 @@ impl Clock {
 
         let current_format = self.current_format();
 
-        let interval = if second_specifiers
-            .iter()
-            .any(|&spec| current_format.contains(spec))
-        {
+        let interval = if second_specifiers.iter().any(|&spec| current_format.contains(spec)) {
             Duration::from_secs(1)
         } else {
             Duration::from_secs(5)
@@ -314,16 +291,13 @@ impl Clock {
 
         Subscription::run_with(interval, |interval| {
             let interval = *interval;
-            channel(
-                100,
-                async move |mut output: iced::futures::channel::mpsc::Sender<Message>| {
-                    let mut interval = tokio::time::interval(interval);
-                    loop {
-                        interval.tick().await;
-                        output.send(Message::Update).await.ok();
-                    }
-                },
-            )
+            channel(100, async move |mut output: iced::futures::channel::mpsc::Sender<Message>| {
+                let mut interval = tokio::time::interval(interval);
+                loop {
+                    interval.tick().await;
+                    output.send(Message::Update).await.ok();
+                }
+            })
         })
     }
 }

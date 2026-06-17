@@ -4,8 +4,7 @@ use iced::advanced::widget::{Operation, Tree};
 use iced::advanced::{Clipboard, Shell, Widget, mouse};
 use iced::core::widget::tree;
 use iced::{
-    Background, Border, Color, Length, Padding, Point, Rectangle, Shadow, Size, Vector, alignment,
-    event, overlay, touch,
+    Background, Border, Color, Length, Padding, Point, Rectangle, Shadow, Size, Vector, alignment, event, overlay, touch,
 };
 
 type Element<'a, Message, Theme, Renderer> = iced::core::Element<'a, Message, Theme, Renderer>;
@@ -56,8 +55,7 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for MenuWrapper<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for MenuWrapper<'a, Message, Theme, Renderer>
 where
     Message: Clone,
     Renderer: iced::advanced::Renderer,
@@ -85,54 +83,30 @@ where
         }
     }
 
-    fn layout(
-        &mut self,
-        tree: &mut Tree,
-        renderer: &Renderer,
-        limits: &layout::Limits,
-    ) -> layout::Node {
+    fn layout(&mut self, tree: &mut Tree, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
         layout::positioned(
             limits,
             Length::Fill,
             Length::Fill,
             self.padding,
-            |limits| {
-                self.content
-                    .as_widget_mut()
-                    .layout(&mut tree.children[0], renderer, limits)
-            },
+            |limits| self.content.as_widget_mut().layout(&mut tree.children[0], renderer, limits),
             |node, size| {
                 let content_size = node.size();
                 let x = f32::min(
                     f32::max(self.x - content_size.width / 2.0, 4.),
                     size.width - content_size.width - 4.,
                 );
-                let node = node.align(
-                    iced::Alignment::Center,
-                    self.vertical_alignment.into(),
-                    size,
-                );
+                let node = node.align(iced::Alignment::Center, self.vertical_alignment.into(), size);
                 let y = node.bounds().y;
                 node.move_to(Point::new(x, y))
             },
         )
     }
 
-    fn operate(
-        &mut self,
-        tree: &mut Tree,
-        layout: Layout<'_>,
-        renderer: &Renderer,
-        operation: &mut dyn Operation,
-    ) {
+    fn operate(&mut self, tree: &mut Tree, layout: Layout<'_>, renderer: &Renderer, operation: &mut dyn Operation) {
         operation.container(None, layout.bounds());
         operation.traverse(&mut |operation| {
-            self.content.as_widget_mut().operate(
-                &mut tree.children[0],
-                layout.children().next().unwrap(),
-                renderer,
-                operation,
-            );
+            self.content.as_widget_mut().operate(&mut tree.children[0], layout.children().next().unwrap(), renderer, operation);
         });
     }
 
@@ -170,14 +144,7 @@ where
         }
     }
 
-    fn mouse_interaction(
-        &self,
-        _: &Tree,
-        _: Layout<'_>,
-        _: mouse::Cursor,
-        _: &Rectangle,
-        _: &Renderer,
-    ) -> mouse::Interaction {
+    fn mouse_interaction(&self, _: &Tree, _: Layout<'_>, _: mouse::Cursor, _: &Rectangle, _: &Renderer) -> mouse::Interaction {
         mouse::Interaction::default()
     }
 
@@ -233,8 +200,7 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<MenuWrapper<'a, Message, Theme, Renderer>>
-    for Element<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> From<MenuWrapper<'a, Message, Theme, Renderer>> for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a + Clone,
     Theme: 'a,

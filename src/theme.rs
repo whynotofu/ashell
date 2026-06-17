@@ -141,12 +141,7 @@ impl Default for AshellTheme {
                     let bg_text = appearance.background_color.get_text().unwrap_or(text);
 
                     let default_bg = palette::Background::new(palette.background, bg_text);
-                    let bg = |level, fallback| {
-                        appearance
-                            .background_color
-                            .get_pair(level, text)
-                            .unwrap_or(fallback)
-                    };
+                    let bg = |level, fallback| appearance.background_color.get_pair(level, text).unwrap_or(fallback);
 
                     let default_primary = palette::Primary::generate(
                         palette.primary,
@@ -182,48 +177,24 @@ impl Default for AshellTheme {
                         },
                         primary: palette::Primary {
                             base: default_primary.base,
-                            weak: appearance
-                                .primary_color
-                                .get_weak_pair(text)
-                                .unwrap_or(default_primary.weak),
-                            strong: appearance
-                                .primary_color
-                                .get_strong_pair(text)
-                                .unwrap_or(default_primary.strong),
+                            weak: appearance.primary_color.get_weak_pair(text).unwrap_or(default_primary.weak),
+                            strong: appearance.primary_color.get_strong_pair(text).unwrap_or(default_primary.strong),
                         },
                         secondary: palette::Secondary::generate(palette.background, text),
                         success: palette::Success {
                             base: default_success.base,
-                            weak: appearance
-                                .success_color
-                                .get_weak_pair(text)
-                                .unwrap_or(default_success.weak),
-                            strong: appearance
-                                .success_color
-                                .get_strong_pair(text)
-                                .unwrap_or(default_success.strong),
+                            weak: appearance.success_color.get_weak_pair(text).unwrap_or(default_success.weak),
+                            strong: appearance.success_color.get_strong_pair(text).unwrap_or(default_success.strong),
                         },
                         warning: palette::Warning {
                             base: default_warning.base,
-                            weak: appearance
-                                .warning_color
-                                .get_weak_pair(text)
-                                .unwrap_or(default_warning.weak),
-                            strong: appearance
-                                .warning_color
-                                .get_strong_pair(text)
-                                .unwrap_or(default_warning.strong),
+                            weak: appearance.warning_color.get_weak_pair(text).unwrap_or(default_warning.weak),
+                            strong: appearance.warning_color.get_strong_pair(text).unwrap_or(default_warning.strong),
                         },
                         danger: palette::Danger {
                             base: default_danger.base,
-                            weak: appearance
-                                .danger_color
-                                .get_weak_pair(text)
-                                .unwrap_or(default_danger.weak),
-                            strong: appearance
-                                .danger_color
-                                .get_strong_pair(text)
-                                .unwrap_or(default_danger.strong),
+                            weak: appearance.danger_color.get_weak_pair(text).unwrap_or(default_danger.weak),
+                            strong: appearance.danger_color.get_strong_pair(text).unwrap_or(default_danger.strong),
                         },
                         is_dark: true,
                     }
@@ -260,12 +231,7 @@ impl AshellTheme {
                     let bg_text = appearance.background_color.get_text().unwrap_or(text);
 
                     let default_bg = palette::Background::new(palette.background, bg_text);
-                    let bg = |level, fallback| {
-                        appearance
-                            .background_color
-                            .get_pair(level, text)
-                            .unwrap_or(fallback)
-                    };
+                    let bg = |level, fallback| appearance.background_color.get_pair(level, text).unwrap_or(fallback);
 
                     let default_primary = palette::Primary::generate(
                         palette.primary,
@@ -301,48 +267,24 @@ impl AshellTheme {
                         },
                         primary: palette::Primary {
                             base: default_primary.base,
-                            weak: appearance
-                                .primary_color
-                                .get_weak_pair(text)
-                                .unwrap_or(default_primary.weak),
-                            strong: appearance
-                                .primary_color
-                                .get_strong_pair(text)
-                                .unwrap_or(default_primary.strong),
+                            weak: appearance.primary_color.get_weak_pair(text).unwrap_or(default_primary.weak),
+                            strong: appearance.primary_color.get_strong_pair(text).unwrap_or(default_primary.strong),
                         },
                         secondary: palette::Secondary::generate(palette.background, text),
                         success: palette::Success {
                             base: default_success.base,
-                            weak: appearance
-                                .success_color
-                                .get_weak_pair(text)
-                                .unwrap_or(default_success.weak),
-                            strong: appearance
-                                .success_color
-                                .get_strong_pair(text)
-                                .unwrap_or(default_success.strong),
+                            weak: appearance.success_color.get_weak_pair(text).unwrap_or(default_success.weak),
+                            strong: appearance.success_color.get_strong_pair(text).unwrap_or(default_success.strong),
                         },
                         warning: palette::Warning {
                             base: default_warning.base,
-                            weak: appearance
-                                .warning_color
-                                .get_weak_pair(text)
-                                .unwrap_or(default_warning.weak),
-                            strong: appearance
-                                .warning_color
-                                .get_strong_pair(text)
-                                .unwrap_or(default_warning.strong),
+                            weak: appearance.warning_color.get_weak_pair(text).unwrap_or(default_warning.weak),
+                            strong: appearance.warning_color.get_strong_pair(text).unwrap_or(default_warning.strong),
                         },
                         danger: palette::Danger {
                             base: default_danger.base,
-                            weak: appearance
-                                .danger_color
-                                .get_weak_pair(text)
-                                .unwrap_or(default_danger.weak),
-                            strong: appearance
-                                .danger_color
-                                .get_strong_pair(text)
-                                .unwrap_or(default_danger.strong),
+                            weak: appearance.danger_color.get_weak_pair(text).unwrap_or(default_danger.weak),
+                            strong: appearance.danger_color.get_strong_pair(text).unwrap_or(default_danger.strong),
                         },
                         is_dark: true,
                     }
@@ -423,15 +365,7 @@ impl AshellTheme {
                     ..button::Style::default()
                 },
                 (ButtonKind::Transparent, Status::Hovered) => button::Style {
-                    background: Some(
-                        theme
-                            .extended_palette()
-                            .background
-                            .base
-                            .text
-                            .scale_alpha(0.04)
-                            .into(),
-                    ),
+                    background: Some(theme.extended_palette().background.base.text.scale_alpha(0.04).into()),
                     border: Border {
                         width: 0.0,
                         radius: radius.into(),
@@ -470,9 +404,7 @@ impl AshellTheme {
                     let disabled_opacity = 0.3;
                     match kind {
                         ButtonKind::Solid => button::Style {
-                            background: Some(
-                                base_bg.scale_alpha(opacity * disabled_opacity).into(),
-                            ),
+                            background: Some(base_bg.scale_alpha(opacity * disabled_opacity).into()),
                             border: Border {
                                 width: 0.0,
                                 radius: radius.into(),
@@ -518,10 +450,7 @@ impl AshellTheme {
         }
     }
 
-    pub fn quick_settings_submenu_button_style(
-        &self,
-        _is_active: bool,
-    ) -> impl Fn(&Theme, Status) -> button::Style + use<> {
+    pub fn quick_settings_submenu_button_style(&self, _is_active: bool) -> impl Fn(&Theme, Status) -> button::Style + use<> {
         let radius_lg = self.radius.lg;
         move |theme: &Theme, _status: Status| button::Style {
             background: None,
@@ -535,22 +464,11 @@ impl AshellTheme {
         }
     }
 
-    pub fn quick_settings_button_style(
-        &self,
-        _is_active: bool,
-    ) -> impl Fn(&Theme, Status) -> button::Style + use<> {
+    pub fn quick_settings_button_style(&self, _is_active: bool) -> impl Fn(&Theme, Status) -> button::Style + use<> {
         let radius_xl = self.radius.xl;
         let opacity = self.opacity;
         move |theme: &Theme, _status: Status| button::Style {
-            background: Some(
-                theme
-                    .extended_palette()
-                    .background
-                    .weak
-                    .color
-                    .scale_alpha(opacity)
-                    .into(),
-            ),
+            background: Some(theme.extended_palette().background.weak.color.scale_alpha(opacity).into()),
             border: Border {
                 width: 0.0,
                 radius: radius_xl.into(),
@@ -561,10 +479,7 @@ impl AshellTheme {
         }
     }
 
-    pub fn quick_settings_icon_container_style(
-        &self,
-        is_active: bool,
-    ) -> impl Fn(&Theme) -> container::Style + use<> {
+    pub fn quick_settings_icon_container_style(&self, is_active: bool) -> impl Fn(&Theme) -> container::Style + use<> {
         let opacity = self.opacity;
         move |theme: &Theme| container::Style {
             background: Some(
@@ -598,12 +513,7 @@ impl AshellTheme {
         let radius_lg = self.radius.lg;
         move |theme: &Theme, status: Status| {
             let (bg_color, fg_color) = colors.map_or_else(
-                || {
-                    (
-                        theme.extended_palette().background.weak.color,
-                        theme.palette().text,
-                    )
-                },
+                || (theme.extended_palette().background.weak.color, theme.palette().text),
                 |c| {
                     c.map_or_else(
                         || {
@@ -645,12 +555,7 @@ impl AshellTheme {
                 Status::Active => base,
                 Status::Hovered => {
                     let (bg_color, fg_color) = colors.map_or_else(
-                        || {
-                            (
-                                theme.extended_palette().background.strong.color,
-                                theme.palette().text,
-                            )
-                        },
+                        || (theme.extended_palette().background.strong.color, theme.palette().text),
                         |c| {
                             c.map_or_else(
                                 || {
@@ -688,9 +593,7 @@ impl AshellTheme {
         }
     }
 
-    pub fn text_input_style(
-        &self,
-    ) -> impl Fn(&Theme, text_input::Status) -> text_input::Style + use<> {
+    pub fn text_input_style(&self) -> impl Fn(&Theme, text_input::Status) -> text_input::Style + use<> {
         let radius_xl = self.radius.xl;
         move |theme: &Theme, status: text_input::Status| {
             let mut base = text_input::Style {
@@ -739,15 +642,7 @@ impl AshellTheme {
             match status {
                 Status::Active => base,
                 Status::Hovered => {
-                    base.background = Some(
-                        theme
-                            .extended_palette()
-                            .background
-                            .weak
-                            .color
-                            .scale_alpha(opacity)
-                            .into(),
-                    );
+                    base.background = Some(theme.extended_palette().background.weak.color.scale_alpha(opacity).into());
                     base
                 }
                 _ => base,

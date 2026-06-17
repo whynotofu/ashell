@@ -72,17 +72,11 @@ macro_rules! t {
 }
 
 fn resolve_language(config: Option<&str>) -> LanguageIdentifier {
-    env_chain(config, "LC_MESSAGES")
-        .as_deref()
-        .and_then(|s| normalize_to_bcp47(s).parse().ok())
-        .unwrap_or_else(en_us_langid)
+    env_chain(config, "LC_MESSAGES").as_deref().and_then(|s| normalize_to_bcp47(s).parse().ok()).unwrap_or_else(en_us_langid)
 }
 
 fn resolve_region(config: Option<&str>) -> Locale {
-    env_chain(config, "LC_TIME")
-        .as_deref()
-        .and_then(chrono_locale_from_posix)
-        .unwrap_or(FALLBACK_CHRONO)
+    env_chain(config, "LC_TIME").as_deref().and_then(chrono_locale_from_posix).unwrap_or(FALLBACK_CHRONO)
 }
 
 fn chrono_locale_from_posix(s: &str) -> Option<Locale> {
@@ -140,9 +134,7 @@ fn load_loader(langid: &LanguageIdentifier) -> FluentLanguageLoader {
 }
 
 fn env_locale(var: &str) -> Option<String> {
-    std::env::var(var)
-        .ok()
-        .filter(|s| !s.is_empty() && s != "C" && s != "POSIX")
+    std::env::var(var).ok().filter(|s| !s.is_empty() && s != "C" && s != "POSIX")
 }
 
 fn normalize_to_bcp47(s: &str) -> String {

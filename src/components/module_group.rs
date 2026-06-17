@@ -6,8 +6,7 @@ use iced::{Border, Color, Element, widget::container};
 /// - `Solid | Gradient` → pass through as-is
 /// - `Islands` → wrap in a container with background color + rounded border
 pub fn module_group<'a, Msg: 'static>(content: Element<'a, Msg>) -> Element<'a, Msg> {
-    let (bar_style, opacity, radius) =
-        use_theme(|theme| (theme.bar_style, theme.opacity, theme.radius));
+    let (bar_style, opacity, radius) = use_theme(|theme| (theme.bar_style, theme.opacity, theme.radius));
 
     match bar_style {
         AppearanceStyle::Solid => content,

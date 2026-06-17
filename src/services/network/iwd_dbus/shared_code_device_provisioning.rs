@@ -18,25 +18,16 @@
 //! [Writing a client proxy]: https://dbus2.github.io/zbus/client.html
 //! [D-Bus standard interfaces]: https://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces,
 use zbus::proxy;
-#[proxy(
-    interface = "net.connman.iwd.SharedCodeDeviceProvisioning",
-    assume_defaults = true
-)]
+#[proxy(interface = "net.connman.iwd.SharedCodeDeviceProvisioning", assume_defaults = true)]
 pub trait SharedCodeDeviceProvisioning {
     /// `ConfigureEnrollee` method
-    fn configure_enrollee(
-        &self,
-        args: std::collections::HashMap<&str, &zbus::zvariant::Value<'_>>,
-    ) -> zbus::Result<()>;
+    fn configure_enrollee(&self, args: std::collections::HashMap<&str, &zbus::zvariant::Value<'_>>) -> zbus::Result<()>;
 
     /// `StartConfigurator` method
     fn start_configurator(&self, path: &zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// `StartEnrollee` method
-    fn start_enrollee(
-        &self,
-        args: std::collections::HashMap<&str, &zbus::zvariant::Value<'_>>,
-    ) -> zbus::Result<()>;
+    fn start_enrollee(&self, args: std::collections::HashMap<&str, &zbus::zvariant::Value<'_>>) -> zbus::Result<()>;
 
     /// Stop method
     fn stop(&self) -> zbus::Result<()>;

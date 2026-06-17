@@ -1,6 +1,6 @@
 use super::types::{
-    ActiveWindow, ActiveWindowHyprland, CompositorCommand, CompositorEvent, CompositorMonitor,
-    CompositorState, CompositorWorkspace,
+    ActiveWindow, ActiveWindowHyprland, CompositorCommand, CompositorEvent, CompositorMonitor, CompositorState,
+    CompositorWorkspace,
 };
 use crate::services::{ServiceEvent, compositor::CompositorService};
 use anyhow::Result;
@@ -17,14 +17,12 @@ use tokio::sync::broadcast;
 pub async fn execute_command(cmd: CompositorCommand) -> Result<()> {
     match cmd {
         CompositorCommand::FocusWorkspace(id) => {
-            Dispatch::call(DispatchType::Workspace(WorkspaceIdentifierWithSpecial::Id(
-                id,
-            )))?;
+            Dispatch::call(DispatchType::Workspace(WorkspaceIdentifierWithSpecial::Id(id)))?;
         }
         CompositorCommand::FocusSpecialWorkspace(name) => {
-            Dispatch::call(DispatchType::Workspace(
-                WorkspaceIdentifierWithSpecial::Special(Some(name.as_str())),
-            ))?;
+            Dispatch::call(DispatchType::Workspace(WorkspaceIdentifierWithSpecial::Special(Some(
+                name.as_str(),
+            ))))?;
         }
         CompositorCommand::ToggleSpecialWorkspace(name) => {
             Dispatch::call(DispatchType::ToggleSpecialWorkspace(Some(name)))?;
@@ -34,15 +32,12 @@ pub async fn execute_command(cmd: CompositorCommand) -> Result<()> {
         }
         CompositorCommand::ScrollWorkspace(dir) => {
             let d = if dir > 0 { "+1" } else { "-1" };
-            Dispatch::call(DispatchType::Workspace(
-                WorkspaceIdentifierWithSpecial::Relative(d.to_string().parse()?),
-            ))?;
+            Dispatch::call(DispatchType::Workspace(WorkspaceIdentifierWithSpecial::Relative(
+                d.to_string().parse()?,
+            )))?;
         }
         CompositorCommand::NextLayout => {
-            hyprland::ctl::switch_xkb_layout::call(
-                "all",
-                hyprland::ctl::switch_xkb_layout::SwitchXKBLayoutCmdTypes::Next,
-            )?;
+            hyprland::ctl::switch_xkb_layout::call("all", hyprland::ctl::switch_xkb_layout::SwitchXKBLayoutCmdTypes::Next)?;
         }
         CompositorCommand::CustomDispatch(dispatcher, args) => {
             Dispatch::call(DispatchType::Custom(&dispatcher, &args))?;
@@ -67,15 +62,11 @@ pub async fn run_listener(tx: &broadcast::Sender<ServiceEvent<CompositorService>
 
     // Initial fetch
     {
-        let state_guard = internal_state
-            .read()
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let state_guard = internal_state.read().map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         match fetch_full_state(&state_guard) {
             Ok(state) => {
-                let _ = tx.send(ServiceEvent::Update(CompositorEvent::StateChanged(
-                    Box::new(state),
-                )));
+                let _ = tx.send(ServiceEvent::Update(CompositorEvent::StateChanged(Box::new(state))));
             }
             Err(e) => {
                 log::error!("Failed to fetch initial compositor state: {}", e);
@@ -97,9 +88,7 @@ pub async fn run_listener(tx: &broadcast::Sender<ServiceEvent<CompositorService>
                         if let Ok(state_guard) = internal_state.read()
                             && let Ok(state) = fetch_full_state(&*state_guard)
                         {
-                            let _ = tx.send(ServiceEvent::Update(CompositorEvent::StateChanged(
-                                Box::new(state),
-                            )));
+                            let _ = tx.send(ServiceEvent::Update(CompositorEvent::StateChanged(Box::new(state))));
                         }
                     })
                 }
@@ -132,19 +121,14 @@ pub async fn run_listener(tx: &broadcast::Sender<ServiceEvent<CompositorService>
                 if let Ok(mut state_guard) = internal_state.write() {
                     state_guard.submap = new_submap;
                     if let Ok(state) = fetch_full_state(&state_guard) {
-                        let _ = tx.send(ServiceEvent::Update(CompositorEvent::StateChanged(
-                            Box::new(state),
-                        )));
+                        let _ = tx.send(ServiceEvent::Update(CompositorEvent::StateChanged(Box::new(state))));
                     }
                 }
             })
         }
     });
 
-    listener
-        .start_listener_async()
-        .await
-        .map_err(|e| anyhow::anyhow!(e))
+    listener.start_listener_async().await.map_err(|e| anyhow::anyhow!(e))
 }
 
 fn fetch_full_state(internal_state: &HyprInternalState) -> Result<CompositorState> {
@@ -186,12 +170,7 @@ fn fetch_full_state(internal_state: &HyprInternalState) -> Result<CompositorStat
 
     let keyboard_layout = Devices::get()
         .ok()
-        .and_then(|d| {
-            d.keyboards
-                .into_iter()
-                .find(|k| k.main)
-                .map(|k| k.active_keymap)
-        })
+        .and_then(|d| d.keyboards.into_iter().find(|k| k.main).map(|k| k.active_keymap))
         .unwrap_or_else(|| "Unknown".to_string());
 
     Ok(CompositorState {

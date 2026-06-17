@@ -28,9 +28,7 @@ impl ScreenLockSettings {
         }
     }
 
-    pub fn quick_setting_button<'a>(
-        &'a self,
-    ) -> Option<(Element<'a, Message>, Option<Element<'a, Message>>)> {
+    pub fn quick_setting_button<'a>(&'a self) -> Option<(Element<'a, Message>, Option<Element<'a, Message>>)> {
         let (level, active) = match self.auto_lock {
             true => ("30 minutes", true),
             false => ("Off", false),

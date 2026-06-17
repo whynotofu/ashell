@@ -64,10 +64,7 @@ pub struct BluetoothSettings {
 
 impl BluetoothSettings {
     pub fn new(config: BluetoothSettingsConfig) -> Self {
-        Self {
-            config,
-            service: None,
-        }
+        Self { config, service: None }
     }
 
     pub fn update(&mut self, message: Message) -> Action {
@@ -86,60 +83,40 @@ impl BluetoothSettings {
                 _ => Action::None,
             },
             Message::Toggle => match self.service.as_mut() {
-                Some(service) => Action::CloseSubMenu(
-                    service
-                        .command(BluetoothCommand::Toggle)
-                        .map(Message::Event),
-                ),
+                Some(service) => Action::CloseSubMenu(service.command(BluetoothCommand::Toggle).map(Message::Event)),
                 _ => Action::None,
             },
             Message::ToggleSubMenu => Action::ToggleBluetoothMenu,
             Message::StartDiscovery => match self.service.as_mut() {
-                Some(service) => Action::Command(
-                    service
-                        .command(BluetoothCommand::StartDiscovery)
-                        .map(Message::Event),
-                ),
+                Some(service) => Action::Command(service.command(BluetoothCommand::StartDiscovery).map(Message::Event)),
                 _ => Action::None,
             },
             Message::StopDiscovery => match self.service.as_mut() {
-                Some(service) => Action::Command(
-                    service
-                        .command(BluetoothCommand::StopDiscovery)
-                        .map(Message::Event),
-                ),
+                Some(service) => Action::Command(service.command(BluetoothCommand::StopDiscovery).map(Message::Event)),
                 _ => Action::None,
             },
             Message::PairDevice(device_path) => match self.service.as_mut() {
-                Some(service) => Action::Command(
-                    service
-                        .command(BluetoothCommand::PairDevice(device_path))
-                        .map(Message::Event),
-                ),
+                Some(service) => {
+                    Action::Command(service.command(BluetoothCommand::PairDevice(device_path)).map(Message::Event))
+                }
                 _ => Action::None,
             },
             Message::ConnectDevice(device_path) => match self.service.as_mut() {
-                Some(service) => Action::Command(
-                    service
-                        .command(BluetoothCommand::ConnectDevice(device_path))
-                        .map(Message::Event),
-                ),
+                Some(service) => {
+                    Action::Command(service.command(BluetoothCommand::ConnectDevice(device_path)).map(Message::Event))
+                }
                 _ => Action::None,
             },
             Message::DisconnectDevice(device_path) => match self.service.as_mut() {
-                Some(service) => Action::Command(
-                    service
-                        .command(BluetoothCommand::DisconnectDevice(device_path))
-                        .map(Message::Event),
-                ),
+                Some(service) => {
+                    Action::Command(service.command(BluetoothCommand::DisconnectDevice(device_path)).map(Message::Event))
+                }
                 _ => Action::None,
             },
             Message::RemoveDevice(device_path) => match self.service.as_mut() {
-                Some(service) => Action::Command(
-                    service
-                        .command(BluetoothCommand::RemoveDevice(device_path))
-                        .map(Message::Event),
-                ),
+                Some(service) => {
+                    Action::Command(service.command(BluetoothCommand::RemoveDevice(device_path)).map(Message::Event))
+                }
                 _ => Action::None,
             },
             Message::OpenMore => {
@@ -173,12 +150,7 @@ impl BluetoothSettings {
             && service.state != BluetoothState::Unavailable
         {
             // Get connected devices names
-            let connected_devices: Vec<_> = service
-                .devices
-                .iter()
-                .filter(|d| d.connected)
-                .map(|d| d.name.clone())
-                .collect();
+            let connected_devices: Vec<_> = service.devices.iter().filter(|d| d.connected).map(|d| d.name.clone()).collect();
 
             let device_name = match connected_devices.len() {
                 0 => None,
@@ -210,9 +182,7 @@ impl BluetoothSettings {
                     Some((SubMenu::Bluetooth, sub_menu, Message::ToggleSubMenu))
                         .filter(|_| service.state == BluetoothState::Active),
                 ),
-                sub_menu
-                    .filter(|menu_type| *menu_type == SubMenu::Bluetooth)
-                    .and_then(|_| self.bluetooth_menu(id)),
+                sub_menu.filter(|menu_type| *menu_type == SubMenu::Bluetooth).and_then(|_| self.bluetooth_menu(id)),
             ))
         } else {
             None
@@ -223,29 +193,13 @@ impl BluetoothSettings {
         use_theme(|theme| self.bluetooth_menu_with_theme(id, theme))
     }
 
-    fn bluetooth_menu_with_theme<'a>(
-        &'a self,
-        id: SurfaceId,
-        theme: &AshellTheme,
-    ) -> Option<Element<'a, Message>> {
+    fn bluetooth_menu_with_theme<'a>(&'a self, id: SurfaceId, theme: &AshellTheme) -> Option<Element<'a, Message>> {
         self.service.as_ref().map(|service| {
-            let connected_devices = service
-                .devices
-                .iter()
-                .filter(|d| d.connected)
-                .sorted_by_key(|d| &d.name);
-            let paired_devices = service
-                .devices
-                .iter()
-                .filter(|d| d.paired && !d.connected)
-                .sorted_by_key(|d| &d.name);
+            let connected_devices = service.devices.iter().filter(|d| d.connected).sorted_by_key(|d| &d.name);
+            let paired_devices = service.devices.iter().filter(|d| d.paired && !d.connected).sorted_by_key(|d| &d.name);
 
             let mut known_devices = connected_devices.chain(paired_devices).peekable();
-            let mut available_devices = service
-                .devices
-                .iter()
-                .filter(|d| !d.paired && !d.connected)
-                .peekable();
+            let mut available_devices = service.devices.iter().filter(|d| !d.paired && !d.connected).peekable();
 
             let some_known = known_devices.peek().is_some();
             let some_available = available_devices.peek().is_some();
@@ -321,10 +275,8 @@ impl BluetoothSettings {
                                 divider(),
                             ),
                             container(
-                                scrollable(Column::with_children(
-                                    known_devices.map(known_device_entry),
-                                ))
-                                .spacing(theme.space.xs)
+                                scrollable(Column::with_children(known_devices.map(known_device_entry),))
+                                    .spacing(theme.space.xs)
                             )
                             .max_height(150),
                         )
@@ -352,8 +304,7 @@ impl BluetoothSettings {
                                         styled_button(Element::from(
                                             row![
                                                 text(d.name.clone()).width(Length::Fill),
-                                                text(t!("settings-bluetooth-pair"))
-                                                    .size(theme.font_size.xs),
+                                                text(t!("settings-bluetooth-pair")).size(theme.font_size.xs),
                                             ]
                                             .align_y(Vertical::Center)
                                             .spacing(theme.space.xs),
@@ -379,11 +330,12 @@ impl BluetoothSettings {
                     None
                 })
                 .push(self.config.more_cmd.as_ref().map(|_| divider()))
-                .push(self.config.more_cmd.as_ref().map(|_| {
-                    styled_button(t!("settings-more"))
-                        .on_press(Message::More(id))
-                        .width(Length::Fill)
-                }))
+                .push(
+                    self.config
+                        .more_cmd
+                        .as_ref()
+                        .map(|_| styled_button(t!("settings-more")).on_press(Message::More(id)).width(Length::Fill)),
+                )
                 .spacing(theme.space.sm)
                 .into()
         })
@@ -434,11 +386,7 @@ impl BluetoothSettings {
                     .into(),
                 )
             } else {
-                Some(
-                    MouseArea::new(icon(StaticIcon::Bluetooth))
-                        .on_right_press(Message::OpenMore)
-                        .into(),
-                )
+                Some(MouseArea::new(icon(StaticIcon::Bluetooth)).on_right_press(Message::OpenMore).into())
             }
         } else {
             None

@@ -95,16 +95,8 @@ impl BluetoothService {
         let bluetooth = BluetoothDbus::new(conn).await?;
 
         let interface_changed = stream_select!(
-            bluetooth
-                .bluez
-                .receive_interfaces_added()
-                .await?
-                .map(|_| {}),
-            bluetooth
-                .bluez
-                .receive_interfaces_removed()
-                .await?
-                .map(|_| {}),
+            bluetooth.bluez.receive_interfaces_added().await?.map(|_| {}),
+            bluetooth.bluez.receive_interfaces_removed().await?.map(|_| {}),
         )
         .boxed();
 
@@ -120,27 +112,11 @@ impl BluetoothService {
                 for device in devices {
                     let conn = bluetooth.bluez.inner().connection();
 
-                    let battery = BatteryProxy::builder(conn)
-                        .path(device.path.clone())?
-                        .build()
-                        .await?;
-                    batteries.push(
-                        battery
-                            .receive_percentage_changed()
-                            .await
-                            .map(|_| {})
-                            .boxed(),
-                    );
+                    let battery = BatteryProxy::builder(conn).path(device.path.clone())?.build().await?;
+                    batteries.push(battery.receive_percentage_changed().await.map(|_| {}).boxed());
 
-                    let device_proxy = DeviceProxy::builder(conn)
-                        .path(device.path)?
-                        .build()
-                        .await?;
-                    let connected_changed: EventStream = device_proxy
-                        .receive_connected_changed()
-                        .await
-                        .map(|_| {})
-                        .boxed();
+                    let device_proxy = DeviceProxy::builder(conn).path(device.path)?.build().await?;
+                    let connected_changed: EventStream = device_proxy.receive_connected_changed().await.map(|_| {}).boxed();
                     device_properties.push(connected_changed);
                 }
 
@@ -349,13 +325,11 @@ impl Service for BluetoothService {
                             tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
                             let _ = bluetooth.stop_discovery().await;
                         }
-                        BluetoothService::initialize_data(&conn)
-                            .await
-                            .unwrap_or_else(|_| BluetoothData {
-                                state: BluetoothState::Unavailable,
-                                devices: vec![],
-                                discovering: false,
-                            })
+                        BluetoothService::initialize_data(&conn).await.unwrap_or_else(|_| BluetoothData {
+                            state: BluetoothState::Unavailable,
+                            devices: vec![],
+                            discovering: false,
+                        })
                     },
                     ServiceEvent::Update,
                 )
@@ -368,13 +342,11 @@ impl Service for BluetoothService {
                         if let Ok(bluetooth) = bluetooth {
                             let _ = bluetooth.stop_discovery().await;
                         }
-                        BluetoothService::initialize_data(&conn)
-                            .await
-                            .unwrap_or_else(|_| BluetoothData {
-                                state: BluetoothState::Unavailable,
-                                devices: vec![],
-                                discovering: false,
-                            })
+                        BluetoothService::initialize_data(&conn).await.unwrap_or_else(|_| BluetoothData {
+                            state: BluetoothState::Unavailable,
+                            devices: vec![],
+                            discovering: false,
+                        })
                     },
                     ServiceEvent::Update,
                 )
@@ -388,13 +360,11 @@ impl Service for BluetoothService {
                             debug!("Pairing device: {:?}", device_path);
                             let _ = bluetooth.pair_device(&device_path).await;
                         }
-                        BluetoothService::initialize_data(&conn)
-                            .await
-                            .unwrap_or_else(|_| BluetoothData {
-                                state: BluetoothState::Unavailable,
-                                devices: vec![],
-                                discovering: false,
-                            })
+                        BluetoothService::initialize_data(&conn).await.unwrap_or_else(|_| BluetoothData {
+                            state: BluetoothState::Unavailable,
+                            devices: vec![],
+                            discovering: false,
+                        })
                     },
                     ServiceEvent::Update,
                 )
@@ -408,13 +378,11 @@ impl Service for BluetoothService {
                             debug!("Connecting device: {:?}", device_path);
                             let _ = bluetooth.connect_device(&device_path).await;
                         }
-                        BluetoothService::initialize_data(&conn)
-                            .await
-                            .unwrap_or_else(|_| BluetoothData {
-                                state: BluetoothState::Unavailable,
-                                devices: vec![],
-                                discovering: false,
-                            })
+                        BluetoothService::initialize_data(&conn).await.unwrap_or_else(|_| BluetoothData {
+                            state: BluetoothState::Unavailable,
+                            devices: vec![],
+                            discovering: false,
+                        })
                     },
                     ServiceEvent::Update,
                 )
@@ -428,13 +396,11 @@ impl Service for BluetoothService {
                             debug!("Disconnecting device: {:?}", device_path);
                             let _ = bluetooth.disconnect_device(&device_path).await;
                         }
-                        BluetoothService::initialize_data(&conn)
-                            .await
-                            .unwrap_or_else(|_| BluetoothData {
-                                state: BluetoothState::Unavailable,
-                                devices: vec![],
-                                discovering: false,
-                            })
+                        BluetoothService::initialize_data(&conn).await.unwrap_or_else(|_| BluetoothData {
+                            state: BluetoothState::Unavailable,
+                            devices: vec![],
+                            discovering: false,
+                        })
                     },
                     ServiceEvent::Update,
                 )
@@ -448,13 +414,11 @@ impl Service for BluetoothService {
                             debug!("Removing device: {:?}", device_path);
                             let _ = bluetooth.remove_device(&device_path).await;
                         }
-                        BluetoothService::initialize_data(&conn)
-                            .await
-                            .unwrap_or_else(|_| BluetoothData {
-                                state: BluetoothState::Unavailable,
-                                devices: vec![],
-                                discovering: false,
-                            })
+                        BluetoothService::initialize_data(&conn).await.unwrap_or_else(|_| BluetoothData {
+                            state: BluetoothState::Unavailable,
+                            devices: vec![],
+                            discovering: false,
+                        })
                     },
                     ServiceEvent::Update,
                 )

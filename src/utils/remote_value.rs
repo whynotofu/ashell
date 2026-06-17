@@ -13,11 +13,12 @@ pub struct Remote<Value> {
     timeout: Option<iced::task::Handle>,
 }
 
-impl<Value: Default> Remote<Value> {
+impl<Value> Remote<Value> {
     pub fn new(value: Value) -> Self {
         Self {
+            requested: None,
             received: value,
-            ..Default::default()
+            timeout: None,
         }
     }
 }

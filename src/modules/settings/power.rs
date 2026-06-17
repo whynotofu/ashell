@@ -9,10 +9,7 @@ use crate::{
     config::{PeripheralIndicators, SettingsFormat},
     services::{
         ReadOnlyService, Service, ServiceEvent,
-        upower::{
-            BatteryData, BatteryStatus, PeripheralDeviceKind, PowerProfile, PowerProfileCommand,
-            UPowerService,
-        },
+        upower::{BatteryData, BatteryStatus, PeripheralDeviceKind, PowerProfile, PowerProfileCommand, UPowerService},
     },
     t,
     theme::use_theme,
@@ -115,10 +112,7 @@ pub struct PowerSettings {
 
 impl PowerSettings {
     pub fn new(config: PowerSettingsConfig) -> Self {
-        Self {
-            config,
-            service: None,
-        }
+        Self { config, service: None }
     }
 
     pub fn update(&mut self, message: Message) -> Action {
@@ -138,11 +132,7 @@ impl PowerSettings {
             },
             Message::TogglePeripheralMenu => Action::TogglePeripheralMenu,
             Message::TogglePowerProfile => match self.service.as_mut() {
-                Some(service) => Action::Command(
-                    service
-                        .command(PowerProfileCommand::Toggle)
-                        .map(Message::Event),
-                ),
+                Some(service) => Action::Command(service.command(PowerProfileCommand::Toggle).map(Message::Event)),
                 _ => Action::None,
             },
             Message::Suspend => {
@@ -209,29 +199,26 @@ impl PowerSettings {
 
     pub fn peripheral_menu<'a>(&'a self) -> Option<Element<'a, Message>> {
         let space = use_theme(|t| t.space);
-        self.service
-            .as_ref()
-            .filter(|s| !s.peripherals.is_empty())
-            .map(|service| {
-                Column::with_children(
-                    service
-                        .peripherals
-                        .iter()
-                        .map(|p| {
-                            row![
-                                icon(p.kind.get_icon()),
-                                text(p.name.to_string()).width(Length::Fill),
-                                self.menu_indicator(p.data, None),
-                            ]
-                            .align_y(Vertical::Center)
-                            .spacing(space.sm)
-                            .into()
-                        })
-                        .collect::<Vec<Element<Message>>>(),
-                )
-                .spacing(space.xs)
-                .into()
-            })
+        self.service.as_ref().filter(|s| !s.peripherals.is_empty()).map(|service| {
+            Column::with_children(
+                service
+                    .peripherals
+                    .iter()
+                    .map(|p| {
+                        row![
+                            icon(p.kind.get_icon()),
+                            text(p.name.to_string()).width(Length::Fill),
+                            self.menu_indicator(p.data, None),
+                        ]
+                        .align_y(Vertical::Center)
+                        .spacing(space.sm)
+                        .into()
+                    })
+                    .collect::<Vec<Element<Message>>>(),
+            )
+            .spacing(space.xs)
+            .into()
+        })
     }
 
     pub fn peripheral_indicators<'a>(&self) -> Option<Element<'a, Message>> {
@@ -240,15 +227,10 @@ impl PowerSettings {
             self.service
                 .as_ref()
                 .filter(|p| {
-                    !p.peripherals.is_empty()
-                        && kinds.is_none_or(|kinds| {
-                            p.peripherals.iter().any(|p| kinds.contains(&p.kind))
-                        })
+                    !p.peripherals.is_empty() && kinds.is_none_or(|kinds| p.peripherals.iter().any(|p| kinds.contains(&p.kind)))
                 })
                 .map(|service| {
-                    let mut row = Row::with_capacity(service.peripherals.len())
-                        .spacing(space.xxs)
-                        .align_y(Alignment::Center);
+                    let mut row = Row::with_capacity(service.peripherals.len()).spacing(space.xxs).align_y(Alignment::Center);
 
                     for p in service.peripherals.iter() {
                         row = row.push({
@@ -258,45 +240,36 @@ impl PowerSettings {
                                 Some(
                                     container(match self.config.peripheral_battery_format {
                                         SettingsFormat::Icon => {
-                                            convert::Into::<Element<'a, Message>>::into(icon(
-                                                p.get_icon_state(),
-                                            ))
+                                            convert::Into::<Element<'a, Message>>::into(icon(p.get_icon_state()))
                                         }
-                                        SettingsFormat::Percentage => row!(
-                                            icon(p.kind.get_icon()),
-                                            text(format!("{}%", p.data.capacity))
-                                        )
-                                        .spacing(space.xxs)
-                                        .align_y(Alignment::Center)
-                                        .into(),
-                                        SettingsFormat::IconAndPercentage => row!(
-                                            icon(p.get_icon_state()),
-                                            text(format!("{}%", p.data.capacity))
-                                        )
-                                        .spacing(space.xxs)
-                                        .align_y(Alignment::Center)
-                                        .into(),
-                                        SettingsFormat::Time => {
-                                            text(format_time_for_battery(&p.data)).into()
+                                        SettingsFormat::Percentage => {
+                                            row!(icon(p.kind.get_icon()), text(format!("{}%", p.data.capacity)))
+                                                .spacing(space.xxs)
+                                                .align_y(Alignment::Center)
+                                                .into()
                                         }
-                                        SettingsFormat::IconAndTime => row!(
-                                            icon(p.get_icon_state()),
-                                            text(format_time_for_battery(&p.data))
-                                        )
-                                        .spacing(space.xxs)
-                                        .align_y(Alignment::Center)
-                                        .into(),
+                                        SettingsFormat::IconAndPercentage => {
+                                            row!(icon(p.get_icon_state()), text(format!("{}%", p.data.capacity)))
+                                                .spacing(space.xxs)
+                                                .align_y(Alignment::Center)
+                                                .into()
+                                        }
+                                        SettingsFormat::Time => text(format_time_for_battery(&p.data)).into(),
+                                        SettingsFormat::IconAndTime => {
+                                            row!(icon(p.get_icon_state()), text(format_time_for_battery(&p.data)))
+                                                .spacing(space.xxs)
+                                                .align_y(Alignment::Center)
+                                                .into()
+                                        }
                                     })
-                                    .style(
-                                        move |theme: &Theme| container::Style {
-                                            text_color: Some(match state {
-                                                IndicatorState::Success => theme.palette().success,
-                                                IndicatorState::Danger => theme.palette().danger,
-                                                _ => theme.palette().text,
-                                            }),
-                                            ..Default::default()
-                                        },
-                                    ),
+                                    .style(move |theme: &Theme| container::Style {
+                                        text_color: Some(match state {
+                                            IndicatorState::Success => theme.palette().success,
+                                            IndicatorState::Danger => theme.palette().danger,
+                                            _ => theme.palette().text,
+                                        }),
+                                        ..Default::default()
+                                    }),
                                 )
                             } else {
                                 None
@@ -318,37 +291,21 @@ impl PowerSettings {
     pub fn battery_indicator<'a>(&self) -> Option<Element<'a, Message>> {
         self.service.as_ref().and_then(|service| {
             service.system_battery.and_then(|battery| {
-                if self.config.battery_hide_when_full
-                    && matches!(battery.status, BatteryStatus::Full)
-                {
+                if self.config.battery_hide_when_full && matches!(battery.status, BatteryStatus::Full) {
                     return None;
                 }
                 let state = battery.get_indicator_state();
                 let label: String = match self.config.battery_format {
-                    SettingsFormat::Time | SettingsFormat::IconAndTime => {
-                        format_time_for_battery(&battery)
-                    }
+                    SettingsFormat::Time | SettingsFormat::IconAndTime => format_time_for_battery(&battery),
                     _ => format!("{}%", battery.capacity),
                 };
 
-                Some(
-                    format_indicator(
-                        self.config.battery_format,
-                        battery.get_icon(),
-                        text(label).into(),
-                        state,
-                    )
-                    .into(),
-                )
+                Some(format_indicator(self.config.battery_format, battery.get_icon(), text(label).into(), state).into())
             })
         })
     }
 
-    fn menu_indicator<'a>(
-        &self,
-        battery: BatteryData,
-        peripheral_icon: Option<StaticIcon>,
-    ) -> Element<'a, Message> {
+    fn menu_indicator<'a>(&self, battery: BatteryData, peripheral_icon: Option<StaticIcon>) -> Element<'a, Message> {
         let space = use_theme(|t| t.space);
         let state = battery.get_indicator_state();
 
@@ -372,24 +329,14 @@ impl PowerSettings {
             match battery.status {
                 BatteryStatus::Charging(remaining) if battery.capacity < 95 => row!(
                     battery_info,
-                    text(t!(
-                        "settings-power-full-in",
-                        duration = format_duration(&remaining)
-                    ))
+                    text(t!("settings-power-full-in", duration = format_duration(&remaining)))
                 )
                 .spacing(space.md),
-                BatteryStatus::Discharging(remaining)
-                    if battery.capacity < 95 && !remaining.is_zero() =>
-                {
-                    row!(
-                        battery_info,
-                        text(t!(
-                            "settings-power-empty-in",
-                            duration = format_duration(&remaining)
-                        ))
-                    )
-                    .spacing(space.md)
-                }
+                BatteryStatus::Discharging(remaining) if battery.capacity < 95 && !remaining.is_zero() => row!(
+                    battery_info,
+                    text(t!("settings-power-empty-in", duration = format_duration(&remaining)))
+                )
+                .spacing(space.md),
                 _ => row!(battery_info),
             }
         })
@@ -405,24 +352,17 @@ impl PowerSettings {
                     let indicator = self.menu_indicator(battery, None);
 
                     if !service.peripherals.is_empty() {
-                        styled_button(indicator)
-                            .kind(ButtonKind::Solid)
-                            .on_press(Message::TogglePeripheralMenu)
-                            .into()
+                        styled_button(indicator).kind(ButtonKind::Solid).on_press(Message::TogglePeripheralMenu).into()
                     } else {
                         indicator
                     }
                 })
                 .or_else(|| {
                     if let Some(peripheral) = service.peripherals.first() {
-                        let indicator =
-                            self.menu_indicator(peripheral.data, Some(peripheral.kind.get_icon()));
+                        let indicator = self.menu_indicator(peripheral.data, Some(peripheral.kind.get_icon()));
 
                         Some(if service.peripherals.len() > 1 {
-                            styled_button(indicator)
-                                .kind(ButtonKind::Solid)
-                                .on_press(Message::TogglePeripheralMenu)
-                                .into()
+                            styled_button(indicator).kind(ButtonKind::Solid).on_press(Message::TogglePeripheralMenu).into()
                         } else {
                             indicator
                         })
@@ -434,33 +374,29 @@ impl PowerSettings {
     }
 
     pub fn power_profile_indicator<'a>(&'a self) -> Option<Element<'a, Message>> {
-        self.service
-            .as_ref()
-            .and_then(|service| match service.power_profile {
-                PowerProfile::Balanced => None,
-                PowerProfile::Performance => Some(
-                    container(icon(StaticIcon::Performance))
-                        .style(|theme: &Theme| container::Style {
-                            text_color: Some(theme.palette().danger),
-                            ..Default::default()
-                        })
-                        .into(),
-                ),
-                PowerProfile::PowerSaver => Some(
-                    container(icon(StaticIcon::PowerSaver))
-                        .style(|theme: &Theme| container::Style {
-                            text_color: Some(theme.palette().success),
-                            ..Default::default()
-                        })
-                        .into(),
-                ),
-                PowerProfile::Unknown => None,
-            })
+        self.service.as_ref().and_then(|service| match service.power_profile {
+            PowerProfile::Balanced => None,
+            PowerProfile::Performance => Some(
+                container(icon(StaticIcon::Performance))
+                    .style(|theme: &Theme| container::Style {
+                        text_color: Some(theme.palette().danger),
+                        ..Default::default()
+                    })
+                    .into(),
+            ),
+            PowerProfile::PowerSaver => Some(
+                container(icon(StaticIcon::PowerSaver))
+                    .style(|theme: &Theme| container::Style {
+                        text_color: Some(theme.palette().success),
+                        ..Default::default()
+                    })
+                    .into(),
+            ),
+            PowerProfile::Unknown => None,
+        })
     }
 
-    pub fn quick_setting_button<'a>(
-        &'a self,
-    ) -> Option<(Element<'a, Message>, Option<Element<'a, Message>>)> {
+    pub fn quick_setting_button<'a>(&'a self) -> Option<(Element<'a, Message>, Option<Element<'a, Message>>)> {
         self.service.as_ref().and_then(|service| {
             if !matches!(service.power_profile, PowerProfile::Unknown) {
                 Some((

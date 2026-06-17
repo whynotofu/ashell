@@ -2,9 +2,7 @@ pub mod hyprland;
 pub mod niri;
 pub mod types;
 
-pub use self::types::{
-    CompositorChoice, CompositorCommand, CompositorEvent, CompositorService, CompositorState,
-};
+pub use self::types::{CompositorChoice, CompositorCommand, CompositorEvent, CompositorService, CompositorState};
 
 use crate::services::{ReadOnlyService, Service, ServiceEvent};
 use iced::futures::SinkExt;
@@ -14,8 +12,7 @@ use tokio::sync::{OnceCell, broadcast};
 
 const BROADCAST_CAPACITY: usize = 64;
 
-static BROADCASTER: OnceCell<broadcast::Sender<ServiceEvent<CompositorService>>> =
-    OnceCell::const_new();
+static BROADCASTER: OnceCell<broadcast::Sender<ServiceEvent<CompositorService>>> = OnceCell::const_new();
 
 static BACKEND: OnceLock<Option<CompositorChoice>> = OnceLock::new();
 
@@ -34,9 +31,7 @@ async fn broadcaster_subscribe() -> broadcast::Receiver<ServiceEvent<CompositorS
 async fn broadcaster_event_loop(tx: broadcast::Sender<ServiceEvent<CompositorService>>) {
     let Some(backend) = detect_backend() else {
         log::error!("No supported compositor backend found");
-        let _ = tx.send(ServiceEvent::Error(
-            "No supported compositor backend found".into(),
-        ));
+        let _ = tx.send(ServiceEvent::Error("No supported compositor backend found".into()));
         return;
     };
 
@@ -130,20 +125,14 @@ impl Service for CompositorService {
 
     fn command(&mut self, command: Self::Command) -> Task<ServiceEvent<Self>> {
         let backend = self.backend;
-        Task::perform(
-            async move { execute_command(backend, command).await },
-            |res| match res {
-                Ok(()) => ServiceEvent::Update(CompositorEvent::ActionPerformed),
-                Err(e) => ServiceEvent::Error(e),
-            },
-        )
+        Task::perform(async move { execute_command(backend, command).await }, |res| match res {
+            Ok(()) => ServiceEvent::Update(CompositorEvent::ActionPerformed),
+            Err(e) => ServiceEvent::Error(e),
+        })
     }
 }
 
-async fn execute_command(
-    backend: CompositorChoice,
-    command: CompositorCommand,
-) -> Result<(), String> {
+async fn execute_command(backend: CompositorChoice, command: CompositorCommand) -> Result<(), String> {
     match backend {
         CompositorChoice::Hyprland => hyprland::execute_command(command).await,
         CompositorChoice::Niri => niri::execute_command(command).await,

@@ -45,10 +45,7 @@ pub struct BrightnessSettings {
 
 impl BrightnessSettings {
     pub fn new(config: BrightnessSettingsConfig) -> Self {
-        Self {
-            config,
-            service: None,
-        }
+        Self { config, service: None }
     }
 
     pub fn current_brightness(&self) -> Option<(u32, u32)> {
@@ -60,15 +57,8 @@ impl BrightnessSettings {
             return Action::None;
         };
         let step = (self.config.step * max / 100).max(1);
-        let new_val = if up {
-            (cur + step).min(max)
-        } else {
-            cur.saturating_sub(step)
-        };
-        self.update(Message::Changed(
-            remote_value::Message::RequestAndTimeout(new_val),
-            true,
-        ))
+        let new_val = if up { (cur + step).min(max) } else { cur.saturating_sub(step) };
+        self.update(Message::Changed(remote_value::Message::RequestAndTimeout(new_val), true))
     }
 
     fn on_scroll(current: u32, max: u32, show_osd: bool) -> impl Fn(ScrollDelta) -> Message {
@@ -115,10 +105,7 @@ impl BrightnessSettings {
                         None
                     };
                     return Action::Command(
-                        service
-                            .current
-                            .update(message)
-                            .map(move |msg| Message::Changed(msg, show_osd)),
+                        service.current.update(message).map(move |msg| Message::Changed(msg, show_osd)),
                         osd,
                     );
                 }
@@ -170,9 +157,7 @@ impl BrightnessSettings {
     }
 
     pub fn percent_text<'a>(service: &BrightnessService) -> Text<'a> {
-        let percent = (service.current.value() * 100)
-            .checked_div(service.max)
-            .unwrap_or(0); // Always show 0%, if max_brightness happens to be 0
+        let percent = (service.current.value() * 100).checked_div(service.max).unwrap_or(0); // Always show 0%, if max_brightness happens to be 0
         text(format!("{percent}%"))
     }
 }

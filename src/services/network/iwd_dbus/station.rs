@@ -33,20 +33,13 @@ pub trait Station {
     fn get_ordered_networks(&self) -> zbus::Result<Vec<(zbus::zvariant::OwnedObjectPath, i16)>>;
 
     /// `RegisterSignalLevelAgent` method
-    fn register_signal_level_agent(
-        &self,
-        path: &zbus::zvariant::ObjectPath<'_>,
-        levels: &[i16],
-    ) -> zbus::Result<()>;
+    fn register_signal_level_agent(&self, path: &zbus::zvariant::ObjectPath<'_>, levels: &[i16]) -> zbus::Result<()>;
 
     /// Scan method
     fn scan(&self) -> zbus::Result<()>;
 
     /// `UnregisterSignalLevelAgent` method
-    fn unregister_signal_level_agent(
-        &self,
-        path: &zbus::zvariant::ObjectPath<'_>,
-    ) -> zbus::Result<()>;
+    fn unregister_signal_level_agent(&self, path: &zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// Affinities property
     #[zbus(property)]

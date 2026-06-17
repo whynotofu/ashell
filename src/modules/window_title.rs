@@ -74,15 +74,7 @@ impl WindowTitle {
     }
 
     pub fn view(&'_ self, title: String) -> Element<'_, Message> {
-        use_theme(|theme| {
-            container(
-                text(title)
-                    .size(theme.font_size.sm)
-                    .wrapping(text::Wrapping::None),
-            )
-            .clip(true)
-            .into()
-        })
+        use_theme(|theme| container(text(title).size(theme.font_size.sm).wrapping(text::Wrapping::None)).clip(true).into())
     }
 
     pub fn subscription(&self) -> Subscription<Message> {

@@ -49,9 +49,7 @@ impl BatterySettings {
         )
     }
 
-    pub fn quick_setting_button<'a>(
-        &'a self,
-    ) -> Option<(Element<'a, Message>, Option<Element<'a, Message>>)> {
+    pub fn quick_setting_button<'a>(&'a self) -> Option<(Element<'a, Message>, Option<Element<'a, Message>>)> {
         let (mode, active) = match self.state.mode {
             BatteryProtectionMode::Off => ("Off", false),
             BatteryProtectionMode::On => ("On", true),
@@ -69,13 +67,5 @@ impl BatterySettings {
             ),
             None,
         ))
-    }
-
-    fn thresholds(mode: BatteryProtectionMode) -> (u32, u32) {
-        match mode {
-            BatteryProtectionMode::Off => (95, 100),
-            BatteryProtectionMode::On => (75, 80),
-            BatteryProtectionMode::StationaryMode => (40, 60),
-        }
     }
 }

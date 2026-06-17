@@ -90,9 +90,7 @@ impl AudioSettings {
     }
 
     pub fn real_sink_volume(&self) -> Option<u32> {
-        self.service
-            .as_ref()
-            .and_then(|s| s.active_sink().map(|d| d.volume.get_volume()))
+        self.service.as_ref().and_then(|s| s.active_sink().map(|d| d.volume.get_volume()))
     }
 
     pub fn vol_max() -> u32 {
@@ -143,9 +141,7 @@ impl AudioSettings {
     }
 
     pub fn real_source_volume(&self) -> Option<u32> {
-        self.service
-            .as_ref()
-            .and_then(|s| s.active_source().map(|d| d.volume.get_volume()))
+        self.service.as_ref().and_then(|s| s.active_source().map(|d| d.volume.get_volume()))
     }
 
     pub fn mic_max() -> u32 {
@@ -173,11 +169,7 @@ impl AudioSettings {
     }
 
     pub fn microphone_icon(muted: bool) -> StaticIcon {
-        if muted {
-            StaticIcon::Mic0
-        } else {
-            StaticIcon::Mic1
-        }
+        if muted { StaticIcon::Mic0 } else { StaticIcon::Mic1 }
     }
 
     pub fn update(&mut self, message: Message) -> Action {
@@ -231,12 +223,7 @@ impl AudioSettings {
                         None
                     };
                     return Action::Response(
-                        Some(
-                            service
-                                .sink_slider
-                                .update(message)
-                                .map(move |msg| Message::SinkVolumeChanged(msg, show_osd)),
-                        ),
+                        Some(service.sink_slider.update(message).map(move |msg| Message::SinkVolumeChanged(msg, show_osd))),
                         osd,
                     );
                 }
@@ -275,12 +262,7 @@ impl AudioSettings {
                         None
                     };
                     return Action::Response(
-                        Some(
-                            service
-                                .source_slider
-                                .update(message)
-                                .map(move |msg| Message::SourceVolumeChanged(msg, show_osd)),
-                        ),
+                        Some(service.source_slider.update(message).map(move |msg| Message::SourceVolumeChanged(msg, show_osd))),
                         osd,
                     );
                 }
@@ -328,11 +310,7 @@ impl AudioSettings {
     pub fn source_indicator<'a>(&'a self) -> Option<Element<'a, Message>> {
         self.service
             .as_ref()
-            .and_then(|service| {
-                service
-                    .active_source()
-                    .map(|source| (service, Self::microphone_icon(source.is_mute)))
-            })
+            .and_then(|service| service.active_source().map(|source| (service, Self::microphone_icon(source.is_mute))))
             .map(|(service, icon_type)| {
                 let volume = service.source_slider.value();
                 format_indicator(
@@ -347,10 +325,7 @@ impl AudioSettings {
             })
     }
 
-    pub fn sliders<'a>(
-        &'a self,
-        sub_menu: Option<SubMenu>,
-    ) -> (Option<Element<'a, Message>>, Option<Element<'a, Message>>) {
+    pub fn sliders<'a>(&'a self, sub_menu: Option<SubMenu>) -> (Option<Element<'a, Message>>, Option<Element<'a, Message>>) {
         if let Some(service) = &self.service {
             let sink_slider = service.active_sink().map(|s| {
                 Self::audio_slider(
@@ -395,15 +370,9 @@ impl AudioSettings {
                     .sink_iter()
                     .map(|route| SubmenuEntry {
                         name: route.to_string(),
-                        icon: route
-                            .port
-                            .and_then(Self::port_icon)
-                            .unwrap_or(StaticIcon::Speaker3),
+                        icon: route.port.and_then(Self::port_icon).unwrap_or(StaticIcon::Speaker3),
                         active: route.device.name == service.server_info.default_sink,
-                        msg: Message::DefaultSinkChanged(
-                            route.device.name.clone(),
-                            route.port.map(|p| p.name.clone()),
-                        ),
+                        msg: Message::DefaultSinkChanged(route.device.name.clone(), route.port.map(|p| p.name.clone())),
                     })
                     .collect(),
                 None,
@@ -418,15 +387,9 @@ impl AudioSettings {
                     .source_iter()
                     .map(|route| SubmenuEntry {
                         name: route.to_string(),
-                        icon: route
-                            .port
-                            .and_then(Self::port_icon)
-                            .unwrap_or(StaticIcon::Mic1),
+                        icon: route.port.and_then(Self::port_icon).unwrap_or(StaticIcon::Mic1),
                         active: route.device.name == service.server_info.default_source,
-                        msg: Message::DefaultSourceChanged(
-                            route.device.name.clone(),
-                            route.port.map(|p| p.name.clone()),
-                        ),
+                        msg: Message::DefaultSourceChanged(route.device.name.clone(), route.port.map(|p| p.name.clone())),
                     })
                     .collect(),
                 None,
@@ -516,10 +479,7 @@ impl AudioSettings {
             } else {
                 cur_volume.saturating_sub(VOL_PERCENT)
             };
-            make_msg(
-                remote_value::Message::RequestAndTimeout(new_volume),
-                show_osd,
-            )
+            make_msg(remote_value::Message::RequestAndTimeout(new_volume), show_osd)
         }
     }
 
@@ -527,10 +487,7 @@ impl AudioSettings {
         text(format!("{}%", volume / VOL_PERCENT))
     }
 
-    fn submenu<'a>(
-        entries: Vec<SubmenuEntry<Message>>,
-        more_msg: Option<Message>,
-    ) -> Element<'a, Message> {
+    fn submenu<'a>(entries: Vec<SubmenuEntry<Message>>, more_msg: Option<Message>) -> Element<'a, Message> {
         let space = use_theme(|t| t.space);
         let entries: Element<'a, Message> = Column::with_children(
             entries
@@ -549,11 +506,7 @@ impl AudioSettings {
                         })
                         .into()
                     } else {
-                        styled_button(e.name)
-                            .icon(e.icon, IconPosition::Before)
-                            .on_press(e.msg)
-                            .width(Length::Fill)
-                            .into()
+                        styled_button(e.name).icon(e.icon, IconPosition::Before).on_press(e.msg).width(Length::Fill).into()
                     }
                 })
                 .collect::<Vec<_>>(),
@@ -565,9 +518,7 @@ impl AudioSettings {
             Some(more_msg) => column!(
                 entries,
                 divider(),
-                styled_button(t!("settings-more"))
-                    .on_press(more_msg)
-                    .width(Length::Fill),
+                styled_button(t!("settings-more")).on_press(more_msg).width(Length::Fill),
             )
             .spacing(space.sm)
             .into(),

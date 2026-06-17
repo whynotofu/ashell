@@ -18,9 +18,7 @@ use allsorts::unicode::VariationSelector;
 use allsorts::{subset, tag};
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    let output = Command::new("git")
-        .args(["rev-parse", "--short", "HEAD"])
-        .output();
+    let output = Command::new("git").args(["rev-parse", "--short", "HEAD"]).output();
 
     match output {
         Ok(output) if output.status.success() => {
@@ -54,8 +52,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let unicodes: Vec<String> = unicodes
         .into_iter()
         .map(|h| -> Result<String, Box<dyn Error>> {
-            let u = u32::from_str_radix(&h, 16)
-                .map_err(|e| format!("Invalid unicode hex: {h}: {e}"))?;
+            let u = u32::from_str_radix(&h, 16).map_err(|e| format!("Invalid unicode hex: {h}: {e}"))?;
             let c = std::char::from_u32(u).ok_or_else(|| format!("Invalid char from: {h}"))?;
             Ok(c.to_string())
         })
@@ -90,10 +87,7 @@ fn subset_text(input: &str, text: &str, output_path: &str) -> Result<(), Box<dyn
 
     let mut glyphs: Vec<RawGlyph<()>> = glyphs.into_iter().flatten().collect();
     glyphs.sort_by_key(|a| a.glyph_index);
-    let mut glyph_ids = glyphs
-        .iter()
-        .map(|glyph| glyph.glyph_index)
-        .collect::<Vec<_>>();
+    let mut glyph_ids = glyphs.iter().map(|glyph| glyph.glyph_index).collect::<Vec<_>>();
     glyph_ids.dedup();
     if glyph_ids.is_empty() {
         return Err("no glyphs left in font".to_string().into());
@@ -123,20 +117,13 @@ fn subset_text(input: &str, text: &str, output_path: &str) -> Result<(), Box<dyn
     Ok(())
 }
 
-fn chars_to_glyphs<F: FontTableProvider>(
-    font_provider: &F,
-    text: &str,
-) -> Result<Vec<Option<RawGlyph<()>>>, Box<dyn Error>> {
+fn chars_to_glyphs<F: FontTableProvider>(font_provider: &F, text: &str) -> Result<Vec<Option<RawGlyph<()>>>, Box<dyn Error>> {
     let cmap_data = font_provider.read_table_data(tag::CMAP)?;
     let cmap = ReadScope::new(&cmap_data).read::<Cmap>()?;
-    let (_, cmap_subtable) = read_cmap_subtable(&cmap)?.ok_or(Into::<Box<dyn Error>>::into(
-        "no suitable cmap sub-table found".to_string(),
-    ))?;
+    let (_, cmap_subtable) =
+        read_cmap_subtable(&cmap)?.ok_or(Into::<Box<dyn Error>>::into("no suitable cmap sub-table found".to_string()))?;
 
-    let glyphs = text
-        .chars()
-        .map(|ch| map(&cmap_subtable, ch, None))
-        .collect::<Result<Vec<_>, _>>()?;
+    let glyphs = text.chars().map(|ch| map(&cmap_subtable, ch, None)).collect::<Result<Vec<_>, _>>()?;
 
     Ok(glyphs)
 }
@@ -154,11 +141,7 @@ pub(crate) fn map(
     }
 }
 
-pub(crate) fn make(
-    ch: char,
-    glyph_index: u16,
-    variation: Option<VariationSelector>,
-) -> RawGlyph<()> {
+pub(crate) fn make(ch: char, glyph_index: u16, variation: Option<VariationSelector>) -> RawGlyph<()> {
     RawGlyph {
         unicodes: tiny_vec![[char; 1] => ch],
         glyph_index,

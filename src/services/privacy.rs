@@ -1,9 +1,7 @@
 use super::{ReadOnlyService, ServiceEvent};
 use iced::{
     Subscription,
-    futures::{
-        FutureExt, SinkExt, Stream, StreamExt, channel::mpsc::Sender, select, stream::pending,
-    },
+    futures::{FutureExt, SinkExt, Stream, StreamExt, channel::mpsc::Sender, select, stream::pending},
     stream::channel,
 };
 use inotify::{EventMask, Inotify, WatchMask};
@@ -98,9 +96,8 @@ impl PrivacyService {
                     let tx = tx.clone();
                     move |global| {
                         if let Some(props) = global.props
-                            && let Some(media) = props.get("media.class").filter(|v| {
-                                v == &"Stream/Input/Video" || v == &"Stream/Input/Audio"
-                            })
+                            && let Some(media) =
+                                props.get("media.class").filter(|v| v == &"Stream/Input/Video" || v == &"Stream/Input/Audio")
                         {
                             debug!("New global: {global:?}");
                             let _ = tx.send(PrivacyEvent::AddNode(ApplicationNode {
@@ -132,23 +129,16 @@ impl PrivacyService {
         match boot_rx.await {
             Ok(Ok(())) => Ok(rx),
             Ok(Err(e)) => Err(e),
-            Err(recv_err) => Err(anyhow::anyhow!(
-                "pipewire thread exited before boot could finish: {recv_err}"
-            )),
+            Err(recv_err) => Err(anyhow::anyhow!("pipewire thread exited before boot could finish: {recv_err}")),
         }
     }
 
-    async fn webcam_listener() -> anyhow::Result<Box<dyn Stream<Item = PrivacyEvent> + Unpin + Send>>
-    {
+    async fn webcam_listener() -> anyhow::Result<Box<dyn Stream<Item = PrivacyEvent> + Unpin + Send>> {
         let inotify = Inotify::init()?;
 
         inotify.watches().add(
             WEBCAM_DEVICE_PATH,
-            WatchMask::CLOSE_WRITE
-                | WatchMask::CLOSE_NOWRITE
-                | WatchMask::DELETE_SELF
-                | WatchMask::OPEN
-                | WatchMask::ATTRIB,
+            WatchMask::CLOSE_WRITE | WatchMask::CLOSE_NOWRITE | WatchMask::DELETE_SELF | WatchMask::OPEN | WatchMask::ATTRIB,
         )?;
 
         let buffer = [0; 512];
@@ -160,9 +150,7 @@ impl PrivacyService {
                         debug!("Webcam event: {event:?}");
                         match event.mask {
                             EventMask::OPEN => Some(PrivacyEvent::WebcamOpen),
-                            EventMask::CLOSE_WRITE | EventMask::CLOSE_NOWRITE => {
-                                Some(PrivacyEvent::WebcamClose)
-                            }
+                            EventMask::CLOSE_WRITE | EventMask::CLOSE_NOWRITE => Some(PrivacyEvent::WebcamClose),
                             _ => None,
                         }
                     }
@@ -181,9 +169,7 @@ impl PrivacyService {
                     (Ok(pipewire), Ok(webcam)) => {
                         let data = PrivacyData::new();
 
-                        let _ = output
-                            .send(ServiceEvent::Init(PrivacyService { data }))
-                            .await;
+                        let _ = output.send(ServiceEvent::Init(PrivacyService { data })).await;
 
                         State::Active((pipewire, webcam))
                     }

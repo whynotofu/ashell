@@ -70,8 +70,7 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for Centerbox<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for Centerbox<'a, Message, Theme, Renderer>
 where
     Renderer: iced::advanced::Renderer,
 {
@@ -90,16 +89,8 @@ where
         }
     }
 
-    fn layout(
-        &mut self,
-        tree: &mut Tree,
-        renderer: &Renderer,
-        limits: &layout::Limits,
-    ) -> layout::Node {
-        let limits = limits
-            .width(self.width)
-            .height(self.height)
-            .shrink(self.padding);
+    fn layout(&mut self, tree: &mut Tree, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
+        let limits = limits.width(self.width).height(self.height).shrink(self.padding);
 
         let total_spacing = self.spacing * 3_i32.saturating_sub(1) as f32;
         let max_cross = limits.max().height;
@@ -118,33 +109,25 @@ where
             _ => available.max(0.0),
         };
 
-        let mut calculate_edge_layout =
-            |i: usize, (child, tree): (&mut Element<'a, Message, Theme, Renderer>, &mut Tree)| {
-                let fill_cross_factor = {
-                    let size = child.as_widget().size();
+        let mut calculate_edge_layout = |i: usize, (child, tree): (&mut Element<'a, Message, Theme, Renderer>, &mut Tree)| {
+            let fill_cross_factor = {
+                let size = child.as_widget().size();
 
-                    size.height.fill_factor()
-                };
-
-                let (max_width, max_height) = (
-                    remaining,
-                    if fill_cross_factor != 0 {
-                        cross
-                    } else {
-                        max_cross
-                    },
-                );
-
-                let child_limits = Limits::new(Size::ZERO, Size::new(max_width, max_height));
-
-                let layout = child.as_widget_mut().layout(tree, renderer, &child_limits);
-                let size = layout.size();
-
-                remaining -= size.width;
-                cross = cross.max(size.height);
-
-                nodes[i] = layout;
+                size.height.fill_factor()
             };
+
+            let (max_width, max_height) = (remaining, if fill_cross_factor != 0 { cross } else { max_cross });
+
+            let child_limits = Limits::new(Size::ZERO, Size::new(max_width, max_height));
+
+            let layout = child.as_widget_mut().layout(tree, renderer, &child_limits);
+            let size = layout.size();
+
+            remaining -= size.width;
+            cross = cross.max(size.height);
+
+            nodes[i] = layout;
+        };
 
         calculate_edge_layout(0, (&mut self.children[0], &mut tree.children[0]));
         calculate_edge_layout(2, (&mut self.children[2], &mut tree.children[2]));
@@ -152,10 +135,7 @@ where
 
         nodes[0].move_to_mut(Point::new(self.padding.left, self.padding.top));
         nodes[0].align_mut(Alignment::Start, self.align_items, Size::new(0.0, cross));
-        nodes[2].move_to_mut(Point::new(
-            limits.max().width + self.padding.right,
-            self.padding.top,
-        ));
+        nodes[2].move_to_mut(Point::new(limits.max().width + self.padding.right, self.padding.top));
         nodes[2].align_mut(Alignment::End, self.align_items, Size::new(0.0, cross));
 
         let half_available = available / 2.0;
@@ -179,37 +159,20 @@ where
         }
         nodes[1].align_mut(Alignment::Center, self.align_items, Size::new(0.0, cross));
 
-        let main =
-            nodes[0].size().width + nodes[1].size().width + nodes[2].size().width + total_spacing;
+        let main = nodes[0].size().width + nodes[1].size().width + nodes[2].size().width + total_spacing;
 
         let (intrinsic_width, intrinsic_height) = (main, cross);
-        let size = limits.resolve(
-            self.width,
-            self.height,
-            Size::new(intrinsic_width, intrinsic_height),
-        );
+        let size = limits.resolve(self.width, self.height, Size::new(intrinsic_width, intrinsic_height));
 
         Node::with_children(size.expand(self.padding), nodes.into())
     }
 
-    fn operate(
-        &mut self,
-        tree: &mut Tree,
-        layout: Layout<'_>,
-        renderer: &Renderer,
-        operation: &mut dyn Operation,
-    ) {
+    fn operate(&mut self, tree: &mut Tree, layout: Layout<'_>, renderer: &Renderer, operation: &mut dyn Operation) {
         operation.container(None, layout.bounds());
         operation.traverse(&mut |operation| {
-            self.children
-                .iter_mut()
-                .zip(&mut tree.children)
-                .zip(layout.children())
-                .for_each(|((child, state), layout)| {
-                    child
-                        .as_widget_mut()
-                        .operate(state, layout, renderer, operation);
-                });
+            self.children.iter_mut().zip(&mut tree.children).zip(layout.children()).for_each(|((child, state), layout)| {
+                child.as_widget_mut().operate(state, layout, renderer, operation);
+            });
         });
     }
 
@@ -224,15 +187,8 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
-        for ((child, state), layout) in self
-            .children
-            .iter_mut()
-            .zip(&mut tree.children)
-            .zip(layout.children())
-        {
-            child.as_widget_mut().update(
-                state, event, layout, cursor, renderer, clipboard, shell, viewport,
-            );
+        for ((child, state), layout) in self.children.iter_mut().zip(&mut tree.children).zip(layout.children()) {
+            child.as_widget_mut().update(state, event, layout, cursor, renderer, clipboard, shell, viewport);
         }
     }
 
@@ -248,11 +204,7 @@ where
             .iter()
             .zip(&tree.children)
             .zip(layout.children())
-            .map(|((child, state), layout)| {
-                child
-                    .as_widget()
-                    .mouse_interaction(state, layout, cursor, viewport, renderer)
-            })
+            .map(|((child, state), layout)| child.as_widget().mouse_interaction(state, layout, cursor, viewport, renderer))
             .max()
             .unwrap_or_default()
     }
@@ -268,15 +220,8 @@ where
         viewport: &Rectangle,
     ) {
         if let Some(viewport) = layout.bounds().intersection(viewport) {
-            for ((child, state), layout) in self
-                .children
-                .iter()
-                .zip(&tree.children)
-                .zip(layout.children())
-            {
-                child
-                    .as_widget()
-                    .draw(state, renderer, theme, style, layout, cursor, &viewport);
+            for ((child, state), layout) in self.children.iter().zip(&tree.children).zip(layout.children()) {
+                child.as_widget().draw(state, renderer, theme, style, layout, cursor, &viewport);
             }
         }
     }
@@ -289,19 +234,11 @@ where
         viewport: &Rectangle,
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
-        overlay::from_children(
-            &mut self.children,
-            tree,
-            layout,
-            renderer,
-            viewport,
-            translation,
-        )
+        overlay::from_children(&mut self.children, tree, layout, renderer, viewport, translation)
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<Centerbox<'a, Message, Theme, Renderer>>
-    for Element<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> From<Centerbox<'a, Message, Theme, Renderer>> for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
     Theme: 'a,

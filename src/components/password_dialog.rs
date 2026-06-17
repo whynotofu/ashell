@@ -24,8 +24,7 @@ pub fn view<'a>(
     show_password: bool,
     warning_only: bool,
 ) -> Element<'a, Message> {
-    let (space, font_size, text_input_style) =
-        use_theme(|theme| (theme.space, theme.font_size, theme.text_input_style()));
+    let (space, font_size, text_input_style) = use_theme(|theme| (theme.space, theme.font_size, theme.text_input_style()));
 
     let title = if warning_only {
         t!("password-dialog-open-network-title")

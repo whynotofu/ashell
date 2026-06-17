@@ -37,10 +37,8 @@ impl App {
             &self.general_config.modules.right,
         ]
         .map(|modules_def| {
-            let mut row = Row::with_capacity(modules_def.len())
-                .height(Length::Shrink)
-                .align_y(Alignment::Center)
-                .spacing(space.xxs);
+            let mut row =
+                Row::with_capacity(modules_def.len()).height(Length::Shrink).align_y(Alignment::Center).spacing(space.xxs);
 
             for module_def in modules_def {
                 row = row.push(match module_def {
@@ -61,10 +59,7 @@ impl App {
                 ModuleDef::Single(module) => {
                     vec![self.get_module_subscription(module)]
                 }
-                ModuleDef::Group(group) => group
-                    .iter()
-                    .map(|module| self.get_module_subscription(module))
-                    .collect(),
+                ModuleDef::Group(group) => group.iter().map(|module| self.get_module_subscription(module)).collect(),
             })
             .flatten()
             .collect()
@@ -114,33 +109,18 @@ impl App {
         }
     }
 
-    fn single_module_wrapper<'a>(
-        &'a self,
-        id: SurfaceId,
-        module_name: &'a ModuleName,
-    ) -> Option<Element<'a, Message>> {
-        self.get_module_view(id, module_name)
-            .map(|(content, action)| module_group(self.build_module_item(id, content, action)))
+    fn single_module_wrapper<'a>(&'a self, id: SurfaceId, module_name: &'a ModuleName) -> Option<Element<'a, Message>> {
+        self.get_module_view(id, module_name).map(|(content, action)| module_group(self.build_module_item(id, content, action)))
     }
 
-    fn group_module_wrapper<'a>(
-        &'a self,
-        id: SurfaceId,
-        group: &'a [ModuleName],
-    ) -> Option<Element<'a, Message>> {
-        let modules: Vec<_> = group
-            .iter()
-            .filter_map(|module| self.get_module_view(id, module))
-            .collect();
+    fn group_module_wrapper<'a>(&'a self, id: SurfaceId, group: &'a [ModuleName]) -> Option<Element<'a, Message>> {
+        let modules: Vec<_> = group.iter().filter_map(|module| self.get_module_view(id, module)).collect();
 
         if modules.is_empty() {
             None
         } else {
             let items = Row::with_children(
-                modules
-                    .into_iter()
-                    .map(|(content, action)| self.build_module_item(id, content, action))
-                    .collect::<Vec<_>>(),
+                modules.into_iter().map(|(content, action)| self.build_module_item(id, content, action)).collect::<Vec<_>>(),
             );
             Some(module_group(items.into()))
         }
@@ -152,18 +132,10 @@ impl App {
         module_name: &'a ModuleName,
     ) -> Option<(Element<'a, Message>, Option<OnModulePress>)> {
         match module_name {
-            ModuleName::Workspaces => Some((
-                self.workspaces
-                    .view(id, &self.outputs)
-                    .map(Message::Workspaces),
-                None,
-            )),
-            ModuleName::WindowTitle => self.window_title.get_value().map(|title| {
-                (
-                    self.window_title.view(title).map(Message::WindowTitle),
-                    None,
-                )
-            }),
+            ModuleName::Workspaces => Some((self.workspaces.view(id, &self.outputs).map(Message::Workspaces), None)),
+            ModuleName::WindowTitle => {
+                self.window_title.get_value().map(|title| (self.window_title.view(title).map(Message::WindowTitle), None))
+            }
             ModuleName::SystemInfo => Some((
                 self.system_info.view().map(Message::SystemInfo),
                 Some(OnModulePress::ToggleMenu(MenuType::SystemInfo)),
@@ -176,27 +148,19 @@ impl App {
                     )))),
                 )
             }),
-            ModuleName::KeyboardSubmap => self
-                .keyboard_submap
-                .view()
-                .map(|view| (view.map(Message::KeyboardSubmap), None)),
+            ModuleName::KeyboardSubmap => self.keyboard_submap.view().map(|view| (view.map(Message::KeyboardSubmap), None)),
             ModuleName::Clock => Some((
                 self.clock.view().map(Message::Clock),
                 Some(OnModulePress::ToggleMenuWithExtra {
                     menu_type: MenuType::Clock,
                     on_right_press: Some(Box::new(Message::Clock(clock::Message::NextFormat))),
-                    on_scroll_up: Some(Box::new(Message::Clock(clock::Message::ChangeFormat(
-                        clock::Direction::Next,
-                    )))),
+                    on_scroll_up: Some(Box::new(Message::Clock(clock::Message::ChangeFormat(clock::Direction::Next)))),
                     on_scroll_down: Some(Box::new(Message::Clock(clock::Message::ChangeFormat(
                         clock::Direction::Previous,
                     )))),
                 }),
             )),
-            ModuleName::Privacy => self
-                .privacy
-                .view()
-                .map(|view| (view.map(Message::Privacy), None)),
+            ModuleName::Privacy => self.privacy.view().map(|view| (view.map(Message::Privacy), None)),
 
             ModuleName::Settings => Some((
                 self.settings.view().map(Message::Settings),
@@ -208,22 +172,10 @@ impl App {
     fn get_module_subscription(&self, module_name: &ModuleName) -> Option<Subscription<Message>> {
         match module_name {
             ModuleName::Workspaces => Some(self.workspaces.subscription().map(Message::Workspaces)),
-            ModuleName::WindowTitle => {
-                Some(self.window_title.subscription().map(Message::WindowTitle))
-            }
-            ModuleName::SystemInfo => {
-                Some(self.system_info.subscription().map(Message::SystemInfo))
-            }
-            ModuleName::KeyboardLayout => Some(
-                self.keyboard_layout
-                    .subscription()
-                    .map(Message::KeyboardLayout),
-            ),
-            ModuleName::KeyboardSubmap => Some(
-                self.keyboard_submap
-                    .subscription()
-                    .map(Message::KeyboardSubmap),
-            ),
+            ModuleName::WindowTitle => Some(self.window_title.subscription().map(Message::WindowTitle)),
+            ModuleName::SystemInfo => Some(self.system_info.subscription().map(Message::SystemInfo)),
+            ModuleName::KeyboardLayout => Some(self.keyboard_layout.subscription().map(Message::KeyboardLayout)),
+            ModuleName::KeyboardSubmap => Some(self.keyboard_submap.subscription().map(Message::KeyboardSubmap)),
             ModuleName::Clock => Some(self.clock.subscription().map(Message::Clock)),
             ModuleName::Privacy => Some(self.privacy.subscription().map(Message::Privacy)),
             ModuleName::Settings => Some(self.settings.subscription().map(Message::Settings)),

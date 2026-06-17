@@ -1,15 +1,14 @@
 use crate::{
     components::{
-        MenuSize,
+        MenuSize, brightness_slider_control, format_indicator,
         icons::{StaticIcon, icon, icon_button},
         password_dialog, quick_setting_button, sub_menu_wrapper,
     },
-    config::{SettingsIndicator, SettingsModuleConfig},
+    config::{SettingsFormat, SettingsIndicator, SettingsModuleConfig},
     modules::settings::{
         audio::{AudioSettings, AudioSettingsConfig},
         battery::BatterySettings,
         bluetooth::{BluetoothSettings, BluetoothSettingsConfig},
-        brightness::{BrightnessSettings, BrightnessSettingsConfig},
         keyboard_backlight::KeyboardBacklightSettings,
         network::{NetworkSettings, NetworkSettingsConfig},
         power::{PowerSettings, PowerSettingsConfig},
@@ -17,18 +16,23 @@ use crate::{
         state::State,
     },
     osd,
-    services::idle_inhibitor::IdleInhibitorManager,
+    services::{
+        device::{self, BatteryProtection, DeviceService, KeyboardBacklight, Percentage, PlatformProfile},
+        idle_inhibitor::IdleInhibitorManager,
+    },
     theme::use_theme,
+    utils::IndicatorState,
 };
 use iced::{
     Element, Length, Subscription, SurfaceId, Task, Theme,
-    widget::{Column, Row, Space, container, row, space},
+    mouse::ScrollDelta,
+    widget::{Column, Row, Space, container, row, space, text},
 };
 
 pub(crate) mod audio;
 mod battery;
 mod bluetooth;
-pub(crate) mod brightness;
+//pub(crate) mod brightness;
 mod keyboard_backlight;
 pub(crate) mod network;
 mod power;
@@ -39,7 +43,6 @@ pub struct Settings {
     lock_cmd: Option<String>,
     power: PowerSettings,
     audio: AudioSettings,
-    brightness: BrightnessSettings,
     network: NetworkSettings,
     bluetooth: BluetoothSettings,
     idle_inhibitor: Option<IdleInhibitorManager>,
@@ -50,6 +53,7 @@ pub struct Settings {
     network_dialog_show_password: bool,
     battery: BatterySettings,
     indicators: Vec<SettingsIndicator>,
+    device: DeviceService,
 }
 
 #[derive(Debug, Clone)]
@@ -88,9 +92,8 @@ pub enum Message {
     Network(network::Message),
     Bluetooth(bluetooth::Message),
     Audio(audio::Message),
-    Brightness(brightness::Message),
     ToggleInhibitIdle,
-    KeyboardBacklight(keyboard_backlight::Message),
+    CycleKeyboardBacklight,
     ScreenLock(screen_lock::Message),
     Lock,
     Power(power::Message),
@@ -99,6 +102,10 @@ pub enum Message {
     MenuOpened,
     ConfigReloaded(SettingsModuleConfig),
     Battery(battery::Message),
+    Device(device::Message),
+    CycleBatteryProtection,
+    CyclePlatformProfile,
+    SetDisplayBrightness(u8),
 }
 
 pub enum Action {
@@ -164,11 +171,18 @@ impl Settings {
     }
 
     pub fn brightness_adjust(&mut self, up: bool) -> Action {
-        match self.brightness.brightness_adjust(up) {
-            brightness::Action::Command(task, osd) => {
-                Action::Response(Some(task.map(Message::Brightness)), osd)
+        match self.device.get_display_brightness() {
+            Some(brightness) => {
+                let brightness = if up { brightness.add(1) } else { brightness.sub(1) };
+                self.device.set_display_brightness(brightness);
+                Action::Response(
+                    None,
+                    Some(osd::OsdMessage::Brightness {
+                        value: (brightness.to_u8() as f32) / 100.0,
+                    }),
+                )
             }
-            brightness::Action::None => Action::None,
+            None => Action::None,
         }
     }
 
@@ -220,20 +234,9 @@ impl Settings {
                 config.peripheral_battery_format,
                 config.peripheral_expanded_by_default,
             )),
-            audio: AudioSettings::new(
-                AudioSettingsConfig::new(config.audio_step),
-                state.audio_state,
-            ),
-            brightness: BrightnessSettings::new(BrightnessSettingsConfig::new(
-                config.brightness_step,
-            )),
-            network: NetworkSettings::new(NetworkSettingsConfig::new(
-                config.vpn_more_cmd,
-                config.remove_airplane_btn,
-            )),
-            bluetooth: BluetoothSettings::new(BluetoothSettingsConfig::new(
-                config.bluetooth_more_cmd,
-            )),
+            audio: AudioSettings::new(AudioSettingsConfig::new(config.audio_step), state.audio_state),
+            network: NetworkSettings::new(NetworkSettingsConfig::new(config.vpn_more_cmd, config.remove_airplane_btn)),
+            bluetooth: BluetoothSettings::new(BluetoothSettingsConfig::new(config.bluetooth_more_cmd)),
             idle_inhibitor: if config.remove_idle_btn {
                 None
             } else {
@@ -246,6 +249,7 @@ impl Settings {
             battery: BatterySettings::new(state.battery_protection),
             indicators: config.indicators,
             network_dialog_show_password: false,
+            device: DeviceService::new(),
         }
     }
 
@@ -267,8 +271,36 @@ impl Settings {
                 let _ = self.battery.update(msg);
                 Action::None
             }
-            Message::KeyboardBacklight(msg) => {
-                let _ = self.keyboard_backlight.update(msg);
+            Message::CyclePlatformProfile => {
+                let profile = match self.device.get_platform_profile() {
+                    PlatformProfile::LowPower => PlatformProfile::Balanced,
+                    PlatformProfile::Balanced => PlatformProfile::Performance,
+                    PlatformProfile::Performance => PlatformProfile::LowPower,
+                };
+                self.device.set_platform_profile(profile);
+                Action::None
+            }
+            Message::CycleBatteryProtection => {
+                if let Some(battery_protection) = self.device.get_battery_protection() {
+                    let protection = match battery_protection {
+                        BatteryProtection::Off => BatteryProtection::On,
+                        BatteryProtection::On => BatteryProtection::Stationary,
+                        BatteryProtection::Stationary => BatteryProtection::Off,
+                    };
+                    self.device.set_battery_protection(protection);
+                }
+                Action::None
+            }
+            Message::CycleKeyboardBacklight => {
+                if let Some(backlight) = self.device.get_keyboard_backlight() {
+                    let backlight = match backlight {
+                        KeyboardBacklight::Off => KeyboardBacklight::Low,
+                        KeyboardBacklight::Low => KeyboardBacklight::Medium,
+                        KeyboardBacklight::Medium => KeyboardBacklight::High,
+                        KeyboardBacklight::High => KeyboardBacklight::Off,
+                    };
+                    self.device.set_keyboard_backlight(backlight);
+                }
                 Action::None
             }
             Message::ScreenLock(msg) => {
@@ -294,9 +326,7 @@ impl Settings {
                     Action::None
                 }
                 audio::Action::CloseSubMenu => {
-                    if self.sub_menu == Some(SubMenu::Sinks)
-                        || self.sub_menu == Some(SubMenu::Sources)
-                    {
+                    if self.sub_menu == Some(SubMenu::Sinks) || self.sub_menu == Some(SubMenu::Sources) {
                         self.sub_menu.take();
                     }
                     Action::None
@@ -369,12 +399,15 @@ impl Settings {
                 bluetooth::Action::Command(task) => Action::Command(task.map(Message::Bluetooth)),
                 bluetooth::Action::CloseMenu(id) => Action::CloseMenu(id),
             },
-            Message::Brightness(msg) => match self.brightness.update(msg) {
-                brightness::Action::None => Action::None,
-                brightness::Action::Command(task, osd) => {
-                    Action::Response(Some(task.map(Message::Brightness)), osd)
-                }
-            },
+            Message::SetDisplayBrightness(brightness) => {
+                self.device.set_display_brightness(Percentage::new(brightness));
+                Action::Response(
+                    None,
+                    Some(osd::OsdMessage::Brightness {
+                        value: (brightness as f32) / 100.0,
+                    }),
+                )
+            }
             Message::ToggleSubMenu(menu_type) => {
                 if self.sub_menu == Some(menu_type) {
                     self.sub_menu.take();
@@ -385,9 +418,7 @@ impl Settings {
 
                     if menu_type == SubMenu::Wifi {
                         match self.network.update(network::Message::WifiMenuOpened) {
-                            network::Action::Command(task) => {
-                                Action::Command(task.map(Message::Network))
-                            }
+                            network::Action::Command(task) => Action::Command(task.map(Message::Network)),
                             _ => Action::None,
                         }
                     } else {
@@ -399,6 +430,10 @@ impl Settings {
                 if let Some(idle_inhibitor) = &mut self.idle_inhibitor {
                     idle_inhibitor.toggle();
                 }
+                Action::None
+            }
+            Message::Device(message) => {
+                self.device.update(message);
                 Action::None
             }
             Message::Lock => {
@@ -424,14 +459,9 @@ impl Settings {
                     let action = if let Some(dialog) = self.network_dialog.take() {
                         let message = match dialog.kind {
                             NetworkDialogKind::Password => {
-                                network::Message::PasswordDialogConfirmed(
-                                    dialog.ssid,
-                                    dialog.password.unwrap_or_default(),
-                                )
+                                network::Message::PasswordDialogConfirmed(dialog.ssid, dialog.password.unwrap_or_default())
                             }
-                            NetworkDialogKind::OpenNetworkWarning => {
-                                network::Message::OpenNetworkDialogConfirmed(dialog.ssid)
-                            }
+                            NetworkDialogKind::OpenNetworkWarning => network::Message::OpenNetworkDialogConfirmed(dialog.ssid),
                         };
 
                         match self.network.update(message) {
@@ -461,38 +491,30 @@ impl Settings {
                     None
                 };
 
-                self.brightness.update(brightness::Message::MenuOpened);
-
                 Action::None
             }
             Message::ConfigReloaded(config) => {
                 self.lock_cmd = config.lock_cmd;
-                self.power
-                    .update(power::Message::ConfigReloaded(PowerSettingsConfig::new(
-                        config.suspend_cmd,
-                        config.hibernate_cmd,
-                        config.reboot_cmd,
-                        config.shutdown_cmd,
-                        config.logout_cmd,
-                        config.battery_format,
-                        config.battery_hide_when_full,
-                        config.peripheral_indicators,
-                        config.peripheral_battery_format,
-                        config.peripheral_expanded_by_default,
-                    )));
-                self.audio
-                    .update(audio::Message::ConfigReloaded(AudioSettingsConfig::new(
-                        config.audio_step,
-                    )));
-                self.network.update(network::Message::ConfigReloaded(
-                    NetworkSettingsConfig::new(config.vpn_more_cmd, config.remove_airplane_btn),
-                ));
-                self.bluetooth.update(bluetooth::Message::ConfigReloaded(
-                    BluetoothSettingsConfig::new(config.bluetooth_more_cmd),
-                ));
-                self.brightness.update(brightness::Message::ConfigReloaded(
-                    BrightnessSettingsConfig::new(config.brightness_step),
-                ));
+                self.power.update(power::Message::ConfigReloaded(PowerSettingsConfig::new(
+                    config.suspend_cmd,
+                    config.hibernate_cmd,
+                    config.reboot_cmd,
+                    config.shutdown_cmd,
+                    config.logout_cmd,
+                    config.battery_format,
+                    config.battery_hide_when_full,
+                    config.peripheral_indicators,
+                    config.peripheral_battery_format,
+                    config.peripheral_expanded_by_default,
+                )));
+                self.audio.update(audio::Message::ConfigReloaded(AudioSettingsConfig::new(config.audio_step)));
+                self.network.update(network::Message::ConfigReloaded(NetworkSettingsConfig::new(
+                    config.vpn_more_cmd,
+                    config.remove_airplane_btn,
+                )));
+                self.bluetooth.update(bluetooth::Message::ConfigReloaded(BluetoothSettingsConfig::new(
+                    config.bluetooth_more_cmd,
+                )));
                 if config.remove_idle_btn {
                     self.idle_inhibitor = None;
                 } else if self.idle_inhibitor.is_none() {
@@ -516,17 +538,8 @@ impl Settings {
             )
             .map(Message::PasswordDialog)
         } else {
-            //Show only if hidden in bar!
-            let battery_data = self
-                .power
-                .battery_menu_indicator()
-                .map(|e| e.map(Message::Power));
             let right_buttons = Row::with_capacity(2)
-                .push(
-                    self.lock_cmd
-                        .as_ref()
-                        .map(|_| icon_button(StaticIcon::Lock).on_press(Message::Lock)),
-                )
+                .push(self.lock_cmd.as_ref().map(|_| icon_button(StaticIcon::Lock).on_press(Message::Lock)))
                 .push(
                     icon_button(if self.sub_menu == Some(SubMenu::Power) {
                         StaticIcon::Close
@@ -538,7 +551,6 @@ impl Settings {
                 .spacing(space.xs);
 
             let header = Row::with_capacity(3)
-                .push(battery_data)
                 .push(Space::new().width(Length::Fill))
                 .push(right_buttons)
                 .spacing(space.xs)
@@ -546,103 +558,113 @@ impl Settings {
 
             let (sink_slider, source_slider) = self.audio.sliders(self.sub_menu);
 
-            let quick_settings = quick_settings_section(
-                vec![
-                    self.network
-                        .wifi_quick_setting_button(id, self.sub_menu)
-                        .map(|(button, submenu)| {
-                            (
-                                button.map(Message::Network),
-                                submenu.map(|e| e.map(Message::Network)),
-                            )
-                        }),
-                    self.bluetooth.quick_setting_button(id, self.sub_menu).map(
-                        |(button, submenu)| {
-                            (
-                                button.map(Message::Bluetooth),
-                                submenu.map(|e| e.map(Message::Bluetooth)),
-                            )
-                        },
-                    ),
-                    self.network
-                        .vpn_quick_setting_button(id, self.sub_menu)
-                        .map(|(button, submenu)| {
-                            (
-                                button.map(Message::Network),
-                                submenu.map(|e| e.map(Message::Network)),
-                            )
-                        }),
-                    self.network
-                        .airplane_mode_quick_setting_button()
-                        .map(|(button, _)| (button.map(Message::Network), None)),
-                    self.idle_inhibitor.as_ref().map(|idle_inhibitor| {
-                        (
-                            quick_setting_button(
-                                IdleInhibitorManager::idle_inhibitor_icon(
-                                    idle_inhibitor.is_inhibited(),
-                                ),
-                                "Display Power Saver".to_string(),
-                                Some(
-                                    match !idle_inhibitor.is_inhibited() {
-                                        true => "5 minutes",
-                                        false => "Off",
-                                    }
-                                    .to_string(),
-                                ),
-                                !idle_inhibitor.is_inhibited(),
-                                Message::ToggleInhibitIdle,
-                                None,
-                                None,
-                            ),
-                            None,
-                        )
-                    }),
-                    self.power.quick_setting_button().map(|(button, submenu)| {
-                        (
-                            button.map(Message::Power),
-                            submenu.map(|e| e.map(Message::Power)),
-                        )
-                    }),
-                    self.battery
-                        .quick_setting_button()
-                        .map(|(button, submenu)| {
-                            (
-                                button.map(Message::Battery),
-                                submenu.map(|e| e.map(Message::Battery)),
-                            )
-                        }),
-                    self.keyboard_backlight
-                        .quick_setting_button()
-                        .map(|(button, submenu)| {
-                            (
-                                button.map(Message::KeyboardBacklight),
-                                submenu.map(|e| e.map(Message::KeyboardBacklight)),
-                            )
-                        }),
-                    self.screen_lock
-                        .quick_setting_button()
-                        .map(|(button, submenu)| {
-                            (
-                                button.map(Message::ScreenLock),
-                                submenu.map(|e| e.map(Message::ScreenLock)),
-                            )
-                        }),
-                ]
-                .into_iter()
-                .flatten()
-                .collect::<Vec<_>>(),
+            let mut quick_settings = Vec::with_capacity(10);
+
+            quick_settings.push(
+                self.network
+                    .wifi_quick_setting_button(id, self.sub_menu)
+                    .map(|(button, submenu)| (button.map(Message::Network), submenu.map(|e| e.map(Message::Network)))),
             );
 
-            Column::with_capacity(11)
+            quick_settings.push(
+                self.bluetooth
+                    .quick_setting_button(id, self.sub_menu)
+                    .map(|(button, submenu)| (button.map(Message::Bluetooth), submenu.map(|e| e.map(Message::Bluetooth)))),
+            );
+
+            quick_settings.push(
+                self.network
+                    .vpn_quick_setting_button(id, self.sub_menu)
+                    .map(|(button, submenu)| (button.map(Message::Network), submenu.map(|e| e.map(Message::Network)))),
+            );
+
+            quick_settings.push(
+                self.network.airplane_mode_quick_setting_button().map(|(button, _)| (button.map(Message::Network), None)),
+            );
+
+            quick_settings.push(self.idle_inhibitor.as_ref().map(|idle_inhibitor| {
+                (
+                    quick_setting_button(
+                        IdleInhibitorManager::idle_inhibitor_icon(idle_inhibitor.is_inhibited()),
+                        "Display Power Saver".to_string(),
+                        Some(
+                            match !idle_inhibitor.is_inhibited() {
+                                true => "5 minutes",
+                                false => "Off",
+                            }
+                            .to_string(),
+                        ),
+                        !idle_inhibitor.is_inhibited(),
+                        Message::ToggleInhibitIdle,
+                        None,
+                        None,
+                    ),
+                    None,
+                )
+            }));
+
+            if self.device.has_platform_profile() {
+                let platform_profile = self.device.get_platform_profile();
+                quick_settings.push(Some((
+                    quick_setting_button(
+                        StaticIcon::Balanced,
+                        "Power Profile".to_string(),
+                        Some(platform_profile.to_string()),
+                        true,
+                        Message::CyclePlatformProfile,
+                        None,
+                        None,
+                    ),
+                    None,
+                )));
+            }
+
+            if let Some(battery_protection) = self.device.get_battery_protection() {
+                let active = battery_protection != BatteryProtection::Off;
+                quick_settings.push(Some((
+                    quick_setting_button(
+                        StaticIcon::BatteryCharging,
+                        "Battery Protection".to_string(),
+                        Some(battery_protection.to_string()),
+                        active,
+                        Message::CycleBatteryProtection,
+                        None,
+                        None,
+                    ),
+                    None,
+                )));
+            }
+
+            if let Some(backlight) = self.device.get_keyboard_backlight() {
+                let active = backlight != KeyboardBacklight::Off;
+                quick_settings.push(Some((
+                    quick_setting_button(
+                        StaticIcon::Keyboard,
+                        "Keyboard Backlight".to_string(),
+                        Some(backlight.to_string()),
+                        active,
+                        Message::CycleKeyboardBacklight,
+                        None,
+                        None,
+                    ),
+                    None,
+                )));
+            }
+
+            quick_settings.push(
+                self.screen_lock
+                    .quick_setting_button()
+                    .map(|(button, submenu)| (button.map(Message::ScreenLock), submenu.map(|e| e.map(Message::ScreenLock)))),
+            );
+
+            let quick_settings = quick_settings_section(quick_settings.into_iter().flatten().collect::<Vec<_>>());
+
+            let mut content = Column::with_capacity(11)
                 .push(header)
                 .push(
                     self.sub_menu
                         .filter(|menu_type| *menu_type == SubMenu::PeripheralMenu)
-                        .and_then(|_| {
-                            self.power
-                                .peripheral_menu()
-                                .map(|e| sub_menu_wrapper(e.map(Message::Power)))
-                        }),
+                        .and_then(|_| self.power.peripheral_menu().map(|e| sub_menu_wrapper(e.map(Message::Power)))),
                 )
                 .push(
                     self.sub_menu
@@ -653,26 +675,23 @@ impl Settings {
                 .push(
                     self.sub_menu
                         .filter(|menu_type| *menu_type == SubMenu::Sinks)
-                        .and_then(|_| {
-                            self.audio
-                                .sinks_submenu()
-                                .map(|submenu| sub_menu_wrapper(submenu.map(Message::Audio)))
-                        }),
+                        .and_then(|_| self.audio.sinks_submenu().map(|submenu| sub_menu_wrapper(submenu.map(Message::Audio)))),
                 )
                 .push(source_slider.map(|e| e.map(Message::Audio)))
                 .push(
-                    self.sub_menu
-                        .filter(|menu_type| *menu_type == SubMenu::Sources)
-                        .and_then(|_| {
-                            self.audio
-                                .sources_submenu()
-                                .map(|submenu| sub_menu_wrapper(submenu.map(Message::Audio)))
-                        }),
-                )
-                .push(self.brightness.slider().map(|e| e.map(Message::Brightness)))
-                .push(quick_settings)
-                .spacing(space.md)
-                .into()
+                    self.sub_menu.filter(|menu_type| *menu_type == SubMenu::Sources).and_then(|_| {
+                        self.audio.sources_submenu().map(|submenu| sub_menu_wrapper(submenu.map(Message::Audio)))
+                    }),
+                );
+
+            if let Some(brightness) = self.device.get_display_brightness() {
+                let slider: Element<Message> =
+                    brightness_slider_control(brightness.to_u8(), Message::SetDisplayBrightness).into();
+
+                content = content.push(slider);
+            }
+
+            content.push(quick_settings).spacing(space.md).into()
         })
         .width(MenuSize::Medium)
         .into()
@@ -685,96 +704,80 @@ impl Settings {
         for indicator in &self.indicators {
             match indicator {
                 SettingsIndicator::IdleInhibitor => {
-                    if let Some(element) =
-                        self.idle_inhibitor
-                            .as_ref()
-                            .filter(|i| i.is_inhibited())
-                            .map(|_| {
-                                container(icon(IdleInhibitorManager::idle_inhibitor_icon(true)))
-                                    .style(|theme: &Theme| container::Style {
-                                        text_color: Some(theme.palette().danger),
-                                        ..Default::default()
-                                    })
-                            })
-                    {
+                    if let Some(element) = self.idle_inhibitor.as_ref().filter(|i| i.is_inhibited()).map(|_| {
+                        container(icon(IdleInhibitorManager::idle_inhibitor_icon(true))).style(|theme: &Theme| {
+                            container::Style {
+                                text_color: Some(theme.palette().danger),
+                                ..Default::default()
+                            }
+                        })
+                    }) {
                         row = row.push(element);
                     }
                 }
                 SettingsIndicator::PowerProfile => {
-                    if let Some(element) = self
-                        .power
-                        .power_profile_indicator()
-                        .map(|e| e.map(Message::Power))
-                    {
+                    if let Some(element) = self.power.power_profile_indicator().map(|e| e.map(Message::Power)) {
                         row = row.push(element);
                     }
                 }
                 SettingsIndicator::Audio => {
-                    if let Some(element) =
-                        self.audio.sink_indicator().map(|e| e.map(Message::Audio))
-                    {
+                    if let Some(element) = self.audio.sink_indicator().map(|e| e.map(Message::Audio)) {
                         row = row.push(element);
                     }
                 }
                 SettingsIndicator::Network => {
-                    if let Some(element) = self
-                        .network
-                        .connection_indicator()
-                        .map(|e| e.map(Message::Network))
-                    {
+                    if let Some(element) = self.network.connection_indicator().map(|e| e.map(Message::Network)) {
                         row = row.push(element);
                     }
                 }
                 SettingsIndicator::Vpn => {
-                    if let Some(element) = self
-                        .network
-                        .vpn_indicator()
-                        .map(|e| e.map(Message::Network))
-                    {
+                    if let Some(element) = self.network.vpn_indicator().map(|e| e.map(Message::Network)) {
                         row = row.push(element);
                     }
                 }
                 SettingsIndicator::Bluetooth => {
-                    if let Some(element) = self
-                        .bluetooth
-                        .bluetooth_indicator()
-                        .map(|e| e.map(Message::Bluetooth))
-                    {
+                    if let Some(element) = self.bluetooth.bluetooth_indicator().map(|e| e.map(Message::Bluetooth)) {
                         row = row.push(element);
                     }
                 }
                 SettingsIndicator::Microphone => {
-                    if let Some(element) =
-                        self.audio.source_indicator().map(|e| e.map(Message::Audio))
-                    {
+                    if let Some(element) = self.audio.source_indicator().map(|e| e.map(Message::Audio)) {
                         row = row.push(element);
                     }
                 }
                 SettingsIndicator::Battery => {
-                    if let Some(element) = self
-                        .power
-                        .battery_indicator()
-                        .map(|e| e.map(Message::Power))
-                    {
-                        row = row.push(element);
+                    if let Some((charge, _status)) = self.device.get_battery_info() {
+                        let icon = get_battery_icon(charge.to_u8());
+                        let state = if charge.to_u8() < 15 {
+                            IndicatorState::Danger
+                        } else {
+                            IndicatorState::Normal
+                        };
+                        row = row.push(format_indicator(
+                            SettingsFormat::IconAndPercentage,
+                            icon,
+                            text(format!("{}%", charge)).into(),
+                            state,
+                        ));
                     }
                 }
                 SettingsIndicator::PeripheralBattery => {
-                    if let Some(element) = self
-                        .power
-                        .peripheral_indicators()
-                        .map(|e| e.map(Message::Power))
-                    {
+                    if let Some(element) = self.power.peripheral_indicators().map(|e| e.map(Message::Power)) {
                         row = row.push(element);
                     }
                 }
                 SettingsIndicator::Brightness => {
-                    if let Some(element) = self
-                        .brightness
-                        .brightness_indicator()
-                        .map(|e| e.map(Message::Brightness))
-                    {
-                        row = row.push(element);
+                    if let Some(brightness) = self.device.get_display_brightness() {
+                        let idicator: Element<Message> = format_indicator(
+                            SettingsFormat::Icon,
+                            StaticIcon::Brightness,
+                            text(format!("{}%", brightness)).into(),
+                            IndicatorState::Normal,
+                        )
+                        .on_scroll(Self::brightness_indicator_on_scroll(brightness.to_u8()))
+                        .into();
+
+                        row = row.push(idicator);
                     }
                 }
             }
@@ -783,20 +786,33 @@ impl Settings {
         row.spacing(space.xs).into()
     }
 
+    fn brightness_indicator_on_scroll(current: u8) -> impl Fn(ScrollDelta) -> Message {
+        move |delta| {
+            let y = match delta {
+                ScrollDelta::Lines { y, .. } => y,
+                ScrollDelta::Pixels { y, .. } => y,
+            };
+            let new = if y > 0.0 {
+                (current + 1).min(100)
+            } else {
+                current.saturating_sub(1)
+            };
+            Message::SetDisplayBrightness(new)
+        }
+    }
+
     pub fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
             self.power.subscription().map(Message::Power),
             self.audio.subscription().map(Message::Audio),
-            self.brightness.subscription().map(Message::Brightness),
             self.network.subscription().map(Message::Network),
             self.bluetooth.subscription().map(Message::Bluetooth),
+            self.device.subscription().map(Message::Device),
         ])
     }
 }
 
-fn quick_settings_section<'a>(
-    buttons: Vec<(Element<'a, Message>, Option<Element<'a, Message>>)>,
-) -> Element<'a, Message> {
+fn quick_settings_section<'a>(buttons: Vec<(Element<'a, Message>, Option<Element<'a, Message>>)>) -> Element<'a, Message> {
     let space = use_theme(|t| t.space);
     // TODO trying to read this function gives me a headache; there's surely
     // a better way to do this, maybe with Iterator::chunks or something?
@@ -808,11 +824,7 @@ fn quick_settings_section<'a>(
     for (button, menu) in buttons.into_iter() {
         match before.take() {
             Some((before_button, before_menu)) => {
-                section = section.push(
-                    row![before_button, button]
-                        .width(Length::Fill)
-                        .spacing(space.xs),
-                );
+                section = section.push(row![before_button, button].width(Length::Fill).spacing(space.xs));
 
                 if let Some(menu) = before_menu {
                     section = section.push(sub_menu_wrapper(menu));
@@ -829,11 +841,7 @@ fn quick_settings_section<'a>(
     }
 
     if let Some((before_button, before_menu)) = before.take() {
-        section = section.push(
-            row![before_button, space::horizontal()]
-                .width(Length::Fill)
-                .spacing(space.xs),
-        );
+        section = section.push(row![before_button, space::horizontal()].width(Length::Fill).spacing(space.xs));
 
         if let Some(menu) = before_menu {
             section = section.push(sub_menu_wrapper(menu));
@@ -841,4 +849,14 @@ fn quick_settings_section<'a>(
     }
 
     section.into()
+}
+
+pub fn get_battery_icon(charge: u8) -> StaticIcon {
+    match charge {
+        (0..20) => StaticIcon::Battery0,
+        (20..40) => StaticIcon::Battery1,
+        (40..60) => StaticIcon::Battery2,
+        (60..80) => StaticIcon::Battery3,
+        (80..) => StaticIcon::Battery4,
+    }
 }

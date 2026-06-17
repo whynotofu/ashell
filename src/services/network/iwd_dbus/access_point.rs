@@ -14,9 +14,7 @@ use zbus::proxy;
 #[proxy(interface = "net.connman.iwd.AccessPoint", assume_defaults = true)]
 pub trait AccessPoint {
     /// `GetOrderedNetworks` method
-    fn get_ordered_networks(
-        &self,
-    ) -> zbus::Result<std::collections::HashMap<String, zbus::zvariant::OwnedValue>>;
+    fn get_ordered_networks(&self) -> zbus::Result<std::collections::HashMap<String, zbus::zvariant::OwnedValue>>;
 
     /// `Scan` method
     fn scan(&self) -> zbus::Result<()>;

@@ -189,15 +189,11 @@ where
     let v = u32::deserialize(deserializer)?;
 
     if v < 1 {
-        return Err(serde::de::Error::custom(
-            "Audio step must be greater than 0",
-        ));
+        return Err(serde::de::Error::custom("Audio step must be greater than 0"));
     }
 
     if v > 10 {
-        return Err(serde::de::Error::custom(
-            "Audio step cannot be greater than 10",
-        ));
+        return Err(serde::de::Error::custom("Audio step cannot be greater than 10"));
     }
 
     Ok(v)
@@ -243,10 +239,7 @@ fn hex_to_color(hex: HexColor) -> Color {
 }
 
 fn hex_to_pair(hex: HexColor, text: Option<HexColor>, text_fallback: Color) -> palette::Pair {
-    palette::Pair::new(
-        hex_to_color(hex),
-        text.map(hex_to_color).unwrap_or(text_fallback),
-    )
+    palette::Pair::new(hex_to_color(hex), text.map(hex_to_color).unwrap_or(text_fallback))
 }
 
 #[derive(Deserialize, Clone, Copy, Debug)]
@@ -279,18 +272,14 @@ impl AppearanceColor {
     pub fn get_weak_pair(&self, text_fallback: Color) -> Option<palette::Pair> {
         match self {
             AppearanceColor::Simple(_) => None,
-            AppearanceColor::Complete { weak, text, .. } => {
-                weak.map(|color| hex_to_pair(color, *text, text_fallback))
-            }
+            AppearanceColor::Complete { weak, text, .. } => weak.map(|color| hex_to_pair(color, *text, text_fallback)),
         }
     }
 
     pub fn get_strong_pair(&self, text_fallback: Color) -> Option<palette::Pair> {
         match self {
             AppearanceColor::Simple(_) => None,
-            AppearanceColor::Complete { strong, text, .. } => {
-                strong.map(|color| hex_to_pair(color, *text, text_fallback))
-            }
+            AppearanceColor::Complete { strong, text, .. } => strong.map(|color| hex_to_pair(color, *text, text_fallback)),
         }
     }
 }
@@ -420,15 +409,11 @@ where
     let v = f64::deserialize(deserializer)?;
 
     if v <= 0.0 {
-        return Err(serde::de::Error::custom(
-            "Scale factor must be greater than 0.0",
-        ));
+        return Err(serde::de::Error::custom("Scale factor must be greater than 0.0"));
     }
 
     if v > 2.0 {
-        return Err(serde::de::Error::custom(
-            "Scale factor cannot be greater than 2.0",
-        ));
+        return Err(serde::de::Error::custom("Scale factor cannot be greater than 2.0"));
     }
 
     Ok(v)
@@ -445,9 +430,7 @@ where
     }
 
     if v > 1.0 {
-        return Err(serde::de::Error::custom(
-            "Opacity cannot be greater than 1.0",
-        ));
+        return Err(serde::de::Error::custom("Opacity cannot be greater than 1.0"));
     }
 
     Ok(v)
@@ -601,8 +584,7 @@ fn empty_string_as_none<'de, D>(d: D) -> Result<Option<String>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    Ok(Option::<String>::deserialize(d)?
-        .and_then(|value| (!value.trim().is_empty()).then_some(value)))
+    Ok(Option::<String>::deserialize(d)?.and_then(|value| (!value.trim().is_empty()).then_some(value)))
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -640,13 +622,10 @@ pub fn get_config(path: Option<PathBuf>) -> Result<(Config, PathBuf), Box<dyn Er
             // Safety: DEFAULT_CONFIG_FILE_PATH is "~/.config/ashell/config.toml" which
             // always has directory components. shellexpand only expands ~/$HOME and never
             // strips path components, so .parent() always returns Some.
-            let parent = expanded
-                .parent()
-                .expect("Failed to get default config parent directory");
+            let parent = expanded.parent().expect("Failed to get default config parent directory");
 
             if !parent.exists() {
-                std::fs::create_dir_all(parent)
-                    .expect("Failed to create default config parent directory");
+                std::fs::create_dir_all(parent).expect("Failed to create default config parent directory");
             }
 
             (read_config(&expanded).unwrap_or_default(), expanded)
@@ -656,15 +635,13 @@ pub fn get_config(path: Option<PathBuf>) -> Result<(Config, PathBuf), Box<dyn Er
 
 fn expand_path(path: PathBuf) -> Result<PathBuf, Box<dyn Error + Send>> {
     let str_path = path.to_string_lossy();
-    let expanded =
-        shellexpand::full(&str_path).map_err(|e| Box::new(e) as Box<dyn Error + Send>)?;
+    let expanded = shellexpand::full(&str_path).map_err(|e| Box::new(e) as Box<dyn Error + Send>)?;
 
     Ok(PathBuf::from(expanded.to_string()))
 }
 
 fn read_config(path: &Path) -> Result<Config, Box<dyn Error + Send>> {
-    let content =
-        std::fs::read_to_string(path).map_err(|e| Box::new(e) as Box<dyn Error + Send>)?;
+    let content = std::fs::read_to_string(path).map_err(|e| Box::new(e) as Box<dyn Error + Send>)?;
 
     info!("Decoding config file {path:?}");
 
@@ -735,8 +712,7 @@ pub fn subscription(path: &Path) -> Subscription<Message> {
                                     }
                                     Ok(inotify::Event {
                                         name: Some(name),
-                                        mask:
-                                            EventMask::CREATE | EventMask::MODIFY | EventMask::MOVED_TO,
+                                        mask: EventMask::CREATE | EventMask::MODIFY | EventMask::MOVED_TO,
                                         ..
                                     }) if file_name == name => {
                                         debug!("File created or moved");
@@ -755,9 +731,7 @@ pub fn subscription(path: &Path) -> Subscription<Message> {
 
                                     let new_config = read_config(&path).unwrap_or_default();
 
-                                    let _ = output
-                                        .send(Message::ConfigChanged(Box::new(new_config)))
-                                        .await;
+                                    let _ = output.send(Message::ConfigChanged(Box::new(new_config))).await;
                                 }
                                 Some(Event::Removed) => {
                                     // wait and double check if the file is really gone
@@ -765,9 +739,7 @@ pub fn subscription(path: &Path) -> Subscription<Message> {
 
                                     if !path.exists() {
                                         info!("Config file removed");
-                                        let _ = output
-                                            .send(Message::ConfigChanged(Box::default()))
-                                            .await;
+                                        let _ = output.send(Message::ConfigChanged(Box::default())).await;
                                     }
                                 }
                                 None => {
@@ -780,9 +752,7 @@ pub fn subscription(path: &Path) -> Subscription<Message> {
                     }
                 }
                 (None, _, _) => {
-                    error!(
-                        "Config file path does not have a parent directory, cannot watch for changes"
-                    );
+                    error!("Config file path does not have a parent directory, cannot watch for changes");
                 }
                 (_, None, _) => {
                     error!("Config file path does not have a file name, cannot watch for changes");

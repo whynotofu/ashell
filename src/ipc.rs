@@ -146,8 +146,8 @@ pub fn socket_path() -> Result<PathBuf> {
 /// Run the IPC client: connect to the daemon, send a command, print the response.
 pub fn run_client(cmd: &IpcCommand) -> Result<()> {
     let path = socket_path()?;
-    let mut stream = UnixStream::connect(&path)
-        .with_context(|| format!("connect to {} — is ashell running?", path.display()))?;
+    let mut stream =
+        UnixStream::connect(&path).with_context(|| format!("connect to {} — is ashell running?", path.display()))?;
 
     let line = format!("{cmd}\n");
     stream.write_all(line.as_bytes()).context("send command")?;
@@ -155,9 +155,7 @@ pub fn run_client(cmd: &IpcCommand) -> Result<()> {
     stream.shutdown(std::net::Shutdown::Write)?;
 
     let mut response = String::new();
-    BufReader::new((&stream).take(MAX_REQUEST_LEN))
-        .read_line(&mut response)
-        .context("read response")?;
+    BufReader::new((&stream).take(MAX_REQUEST_LEN)).read_line(&mut response).context("read response")?;
     let response = response.trim_end();
 
     if let Some(err) = response.strip_prefix("error ") {
@@ -196,8 +194,7 @@ fn create_listener() -> std::result::Result<UnixListener, ListenerError> {
                 && e.kind() != std::io::ErrorKind::NotFound
             {
                 return Err(ListenerError::Other(
-                    anyhow::Error::new(e)
-                        .context(format!("remove stale socket {}", path.display())),
+                    anyhow::Error::new(e).context(format!("remove stale socket {}", path.display())),
                 ));
             }
         }
@@ -209,13 +206,9 @@ fn create_listener() -> std::result::Result<UnixListener, ListenerError> {
         }
     }
 
-    let listener = UnixListener::bind(&path)
-        .with_context(|| format!("bind {}", path.display()))
-        .map_err(ListenerError::Other)?;
-    listener
-        .set_nonblocking(true)
-        .context("set_nonblocking")
-        .map_err(ListenerError::Other)?;
+    let listener =
+        UnixListener::bind(&path).with_context(|| format!("bind {}", path.display())).map_err(ListenerError::Other)?;
+    listener.set_nonblocking(true).context("set_nonblocking").map_err(ListenerError::Other)?;
     log::info!("IPC listening on {}", path.display());
     Ok(listener)
 }
@@ -223,9 +216,7 @@ fn create_listener() -> std::result::Result<UnixListener, ListenerError> {
 /// Read a single command from an accepted client connection.
 fn read_request(stream: &UnixStream) -> Result<IpcCommand> {
     let mut line = String::new();
-    BufReader::new(stream.take(MAX_REQUEST_LEN))
-        .read_line(&mut line)
-        .context("read IPC command")?;
+    BufReader::new(stream.take(MAX_REQUEST_LEN)).read_line(&mut line).context("read IPC command")?;
     line.trim().parse()
 }
 
@@ -255,9 +246,7 @@ fn init_listener() -> Option<tokio::net::UnixListener> {
     let std_listener = match create_listener() {
         Ok(l) => l,
         Err(ListenerError::AlreadyRunning) => {
-            log::warn!(
-                "another ashell instance owns the IPC socket; this instance will run without IPC"
-            );
+            log::warn!("another ashell instance owns the IPC socket; this instance will run without IPC");
             return None;
         }
         Err(ListenerError::Other(e)) => {

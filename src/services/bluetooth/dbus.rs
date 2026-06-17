@@ -98,20 +98,14 @@ impl BluetoothDbus<'_> {
 
         let mut devices = Vec::new();
         for (device_path, has_battery) in devices_proxy {
-            let device = DeviceProxy::builder(self.bluez.inner().connection())
-                .path(device_path.clone())?
-                .build()
-                .await?;
+            let device = DeviceProxy::builder(self.bluez.inner().connection()).path(device_path.clone())?.build().await?;
 
             let name = device.alias().await?;
             let connected = device.connected().await?;
             let paired = device.paired().await?;
 
             let battery = if connected && has_battery {
-                let battery_proxy = BatteryProxy::builder(self.bluez.inner().connection())
-                    .path(&device_path)?
-                    .build()
-                    .await?;
+                let battery_proxy = BatteryProxy::builder(self.bluez.inner().connection()).path(&device_path)?.build().await?;
 
                 Some(battery_proxy.percentage().await?)
             } else {
@@ -131,28 +125,19 @@ impl BluetoothDbus<'_> {
     }
 
     pub async fn pair_device(&self, device_path: &OwnedObjectPath) -> zbus::Result<()> {
-        let device = DeviceProxy::builder(self.bluez.inner().connection())
-            .path(device_path)?
-            .build()
-            .await?;
+        let device = DeviceProxy::builder(self.bluez.inner().connection()).path(device_path)?.build().await?;
 
         device.pair().await
     }
 
     pub async fn connect_device(&self, device_path: &OwnedObjectPath) -> zbus::Result<()> {
-        let device = DeviceProxy::builder(self.bluez.inner().connection())
-            .path(device_path)?
-            .build()
-            .await?;
+        let device = DeviceProxy::builder(self.bluez.inner().connection()).path(device_path)?.build().await?;
 
         device.connect().await
     }
 
     pub async fn disconnect_device(&self, device_path: &OwnedObjectPath) -> zbus::Result<()> {
-        let device = DeviceProxy::builder(self.bluez.inner().connection())
-            .path(device_path)?
-            .build()
-            .await?;
+        let device = DeviceProxy::builder(self.bluez.inner().connection()).path(device_path)?.build().await?;
 
         device.disconnect().await
     }

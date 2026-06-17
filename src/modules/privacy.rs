@@ -43,11 +43,7 @@ impl Privacy {
             Some(
                 container(
                     Row::with_capacity(3)
-                        .push(
-                            service
-                                .screenshare_access()
-                                .then(|| icon(StaticIcon::ScreenShare)),
-                        )
+                        .push(service.screenshare_access().then(|| icon(StaticIcon::ScreenShare)))
                         .push(service.webcam_access().then(|| icon(StaticIcon::Webcam)))
                         .push(service.microphone_access().then(|| icon(StaticIcon::Mic1)))
                         .align_y(Alignment::Center)

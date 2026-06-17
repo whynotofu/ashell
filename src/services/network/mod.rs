@@ -39,21 +39,13 @@ pub trait NetworkBackend: Send + Sync {
 
     /// Connects to a specific access point, potentially with a password.
     /// Returns the updated list of known connections.
-    async fn select_access_point(
-        &self,
-        ap: &AccessPoint,
-        password: Option<String>,
-    ) -> anyhow::Result<()>;
+    async fn select_access_point(&self, ap: &AccessPoint, password: Option<String>) -> anyhow::Result<()>;
 
     async fn known_connections(&self) -> anyhow::Result<Vec<KnownConnection>>;
 
     /// Enables or disables a VPN connection.
     /// Returns the updated list of known connections.
-    async fn set_vpn(
-        &self,
-        connection_path: OwnedObjectPath,
-        enable: bool,
-    ) -> anyhow::Result<Vec<KnownConnection>>;
+    async fn set_vpn(&self, connection_path: OwnedObjectPath, enable: bool) -> anyhow::Result<Vec<KnownConnection>>;
 }
 
 #[derive(Debug, Clone)]
@@ -129,17 +121,9 @@ pub enum KnownConnection {
 
 #[derive(Debug, Clone)]
 pub enum ActiveConnectionInfo {
-    Wired {
-        name: String,
-    },
-    WiFi {
-        name: String,
-        strength: u8,
-    },
-    Vpn {
-        name: String,
-        object_path: OwnedObjectPath,
-    },
+    Wired { name: String },
+    WiFi { name: String, strength: u8 },
+    Vpn { name: String, object_path: OwnedObjectPath },
 }
 
 impl ActiveConnectionInfo {
@@ -200,9 +184,7 @@ impl ReadOnlyService for NetworkService {
                 self.data.wifi_enabled = wifi_enabled;
             }
             NetworkEvent::ScanningNearbyWifi(scanning) => {
-                debug!(
-                    "ScanningNearbyWifi event received, setting scanning_nearby_wifi to {scanning}"
-                );
+                debug!("ScanningNearbyWifi event received, setting scanning_nearby_wifi to {scanning}");
                 self.data.scanning_nearby_wifi = scanning;
             }
             NetworkEvent::ScanRequested(device_paths) => {
@@ -210,16 +192,11 @@ impl ReadOnlyService for NetworkService {
                 self.data.scanning_nearby_wifi = !self.pending_scan_devices.is_empty();
             }
             NetworkEvent::ScanCompleted(device_path) => {
-                if !self
-                    .pending_scan_devices
-                    .iter()
-                    .any(|path| path == &device_path)
-                {
+                if !self.pending_scan_devices.iter().any(|path| path == &device_path) {
                     return;
                 }
 
-                self.pending_scan_devices
-                    .retain(|path| path != &device_path);
+                self.pending_scan_devices.retain(|path| path != &device_path);
                 self.data.scanning_nearby_wifi = !self.pending_scan_devices.is_empty();
             }
             NetworkEvent::WirelessDevice {
@@ -243,26 +220,15 @@ impl ReadOnlyService for NetworkService {
             }
             NetworkEvent::Strength((path, ssid, new_strength)) => {
                 let matching_ap = match path {
-                    Some(path) => self
-                        .data
-                        .wireless_access_points
-                        .iter_mut()
-                        .find(|ap| ap.path == path),
-                    None => self
-                        .data
-                        .wireless_access_points
-                        .iter_mut()
-                        .find(|ap| ap.ssid == ssid),
+                    Some(path) => self.data.wireless_access_points.iter_mut().find(|ap| ap.path == path),
+                    None => self.data.wireless_access_points.iter_mut().find(|ap| ap.ssid == ssid),
                 };
 
                 if let Some(ap) = matching_ap {
                     ap.strength = new_strength;
 
-                    if let Some(ActiveConnectionInfo::WiFi { strength, .. }) = self
-                        .data
-                        .active_connections
-                        .iter_mut()
-                        .find(|ac| ac.name() == ap.ssid)
+                    if let Some(ActiveConnectionInfo::WiFi { strength, .. }) =
+                        self.data.active_connections.iter_mut().find(|ac| ac.name() == ap.ssid)
                     {
                         *strength = new_strength;
                     }
@@ -311,89 +277,42 @@ struct BackendChoiceWithConnection {
 impl NetworkBackend for BackendChoiceWithConnection {
     async fn initialize_data(&self) -> anyhow::Result<NetworkData> {
         match self.choice {
-            BackendChoice::NetworkManager => {
-                NetworkDbus::new(&self.conn).await?.initialize_data().await
-            }
+            BackendChoice::NetworkManager => NetworkDbus::new(&self.conn).await?.initialize_data().await,
             BackendChoice::Iwd => IwdDbus::new(&self.conn).await?.initialize_data().await,
         }
     }
 
     async fn set_airplane_mode(&self, enable: bool) -> anyhow::Result<()> {
         match self.choice {
-            BackendChoice::NetworkManager => {
-                NetworkDbus::new(&self.conn)
-                    .await?
-                    .set_airplane_mode(enable)
-                    .await
-            }
-            BackendChoice::Iwd => {
-                IwdDbus::new(&self.conn)
-                    .await?
-                    .set_airplane_mode(enable)
-                    .await
-            }
+            BackendChoice::NetworkManager => NetworkDbus::new(&self.conn).await?.set_airplane_mode(enable).await,
+            BackendChoice::Iwd => IwdDbus::new(&self.conn).await?.set_airplane_mode(enable).await,
         }
     }
 
     async fn scan_nearby_wifi(&self) -> anyhow::Result<()> {
         match self.choice {
-            BackendChoice::NetworkManager => {
-                NetworkDbus::new(&self.conn).await?.scan_nearby_wifi().await
-            }
+            BackendChoice::NetworkManager => NetworkDbus::new(&self.conn).await?.scan_nearby_wifi().await,
             BackendChoice::Iwd => IwdDbus::new(&self.conn).await?.scan_nearby_wifi().await,
         }
     }
 
     async fn set_wifi_enabled(&self, enable: bool) -> anyhow::Result<()> {
         match self.choice {
-            BackendChoice::NetworkManager => {
-                NetworkDbus::new(&self.conn)
-                    .await?
-                    .set_wifi_enabled(enable)
-                    .await
-            }
-            BackendChoice::Iwd => {
-                IwdDbus::new(&self.conn)
-                    .await?
-                    .set_wifi_enabled(enable)
-                    .await
-            }
+            BackendChoice::NetworkManager => NetworkDbus::new(&self.conn).await?.set_wifi_enabled(enable).await,
+            BackendChoice::Iwd => IwdDbus::new(&self.conn).await?.set_wifi_enabled(enable).await,
         }
     }
 
-    async fn select_access_point(
-        &self,
-        ap: &AccessPoint,
-        password: Option<String>,
-    ) -> anyhow::Result<()> {
+    async fn select_access_point(&self, ap: &AccessPoint, password: Option<String>) -> anyhow::Result<()> {
         match self.choice {
-            BackendChoice::NetworkManager => {
-                NetworkDbus::new(&self.conn)
-                    .await?
-                    .select_access_point(ap, password)
-                    .await
-            }
-            BackendChoice::Iwd => {
-                IwdDbus::new(&self.conn)
-                    .await?
-                    .select_access_point(ap, password)
-                    .await
-            }
+            BackendChoice::NetworkManager => NetworkDbus::new(&self.conn).await?.select_access_point(ap, password).await,
+            BackendChoice::Iwd => IwdDbus::new(&self.conn).await?.select_access_point(ap, password).await,
         }
     }
 
-    async fn set_vpn(
-        &self,
-        connection_path: OwnedObjectPath,
-        enable: bool,
-    ) -> anyhow::Result<Vec<KnownConnection>> {
+    async fn set_vpn(&self, connection_path: OwnedObjectPath, enable: bool) -> anyhow::Result<Vec<KnownConnection>> {
         match self.choice {
-            BackendChoice::NetworkManager => {
-                NetworkDbus::new(&self.conn)
-                    .await?
-                    .set_vpn(connection_path, enable)
-                    .await
-            }
+            BackendChoice::NetworkManager => NetworkDbus::new(&self.conn).await?.set_vpn(connection_path, enable).await,
             // IWD does not handle VPNs directly
             BackendChoice::Iwd => Err(anyhow::anyhow!("IWD does not support VPN management")),
         }
@@ -401,12 +320,7 @@ impl NetworkBackend for BackendChoiceWithConnection {
 
     async fn known_connections(&self) -> anyhow::Result<Vec<KnownConnection>> {
         match self.choice {
-            BackendChoice::NetworkManager => {
-                NetworkDbus::new(&self.conn)
-                    .await?
-                    .known_connections()
-                    .await
-            }
+            BackendChoice::NetworkManager => NetworkDbus::new(&self.conn).await?.known_connections().await,
             BackendChoice::Iwd => IwdDbus::new(&self.conn).await?.known_connections().await,
         }
     }
@@ -420,22 +334,14 @@ impl NetworkService {
                     // get first backend that is available
                     info!("Connecting to backend");
                     let maybe_backend: Result<(NetworkData, BackendChoice), _> =
-                        match NetworkDbus::new(&conn)
-                            .and_then(|nm| async move { nm.initialize_data().await })
-                            .await
-                        {
+                        match NetworkDbus::new(&conn).and_then(|nm| async move { nm.initialize_data().await }).await {
                             Ok(data) => {
                                 info!("NetworkManager service initialized");
                                 Ok((data, BackendChoice::NetworkManager))
                             }
                             Err(err) => {
-                                info!(
-                                    "Failed to initialize NetworkManager. Falling back to iwd. Error: {err}"
-                                );
-                                match IwdDbus::new(&conn)
-                                    .and_then(|iwd| async move { iwd.initialize_data().await })
-                                    .await
-                                {
+                                info!("Failed to initialize NetworkManager. Falling back to iwd. Error: {err}");
+                                match IwdDbus::new(&conn).and_then(|iwd| async move { iwd.initialize_data().await }).await {
                                     Ok(data) => {
                                         info!("IWD service initialized");
                                         Ok((data, BackendChoice::Iwd))
@@ -495,8 +401,7 @@ impl NetworkService {
                         match nm.subscribe_events().await {
                             Ok(mut events) => {
                                 while let Some(event) = events.next().await {
-                                    let exit_loop =
-                                        matches!(event, NetworkEvent::WirelessDevice { .. });
+                                    let exit_loop = matches!(event, NetworkEvent::WirelessDevice { .. });
                                     // Send the event to UI before exiting - UI needs the WirelessDevice data
                                     // (wifi_present and access_points) to populate the network menu
                                     let _ = output.send(ServiceEvent::Update(event)).await;
@@ -576,11 +481,7 @@ impl Service for NetworkService {
                         debug!("Toggling airplane mode to: {}", !airplane_mode);
                         let res = bc.set_airplane_mode(!airplane_mode).await;
 
-                        if res.is_ok() {
-                            !airplane_mode
-                        } else {
-                            airplane_mode
-                        }
+                        if res.is_ok() { !airplane_mode } else { airplane_mode }
                     },
                     |airplane_mode| ServiceEvent::Update(NetworkEvent::AirplaneMode(airplane_mode)),
                 )
@@ -594,23 +495,17 @@ impl Service for NetworkService {
                                 Ok(nm) => match nm.scan_nearby_wifi_with_devices().await {
                                     Ok(device_paths) => device_paths,
                                     Err(err) => {
-                                        error!(
-                                            "ScanNearByWiFi command: NetworkManager scan request failed: {err}"
-                                        );
+                                        error!("ScanNearByWiFi command: NetworkManager scan request failed: {err}");
                                         Vec::new()
                                     }
                                 },
                                 Err(err) => {
-                                    error!(
-                                        "ScanNearByWiFi command: Failed to create NetworkDbus: {err}"
-                                    );
+                                    error!("ScanNearByWiFi command: Failed to create NetworkDbus: {err}");
                                     Vec::new()
                                 }
                             }
                         },
-                        |device_paths| {
-                            ServiceEvent::Update(NetworkEvent::ScanRequested(device_paths))
-                        },
+                        |device_paths| ServiceEvent::Update(NetworkEvent::ScanRequested(device_paths)),
                     )
                 }
                 BackendChoice::Iwd => Task::perform(
@@ -628,31 +523,21 @@ impl Service for NetworkService {
                     async move {
                         let res = bc.set_wifi_enabled(!wifi_enabled).await;
 
-                        if res.is_ok() {
-                            !wifi_enabled
-                        } else {
-                            wifi_enabled
-                        }
+                        if res.is_ok() { !wifi_enabled } else { wifi_enabled }
                     },
                     |wifi_enabled| ServiceEvent::Update(NetworkEvent::WiFiEnabled(wifi_enabled)),
                 )
             }
             NetworkCommand::SelectAccessPoint((access_point, password)) => Task::perform(
                 async move {
-                    bc.select_access_point(&access_point, password)
-                        .await
-                        .unwrap_or_default();
+                    bc.select_access_point(&access_point, password).await.unwrap_or_default();
                     bc.known_connections().await.unwrap_or_default()
                 },
-                |known_connections| {
-                    ServiceEvent::Update(NetworkEvent::KnownConnections(known_connections))
-                },
+                |known_connections| ServiceEvent::Update(NetworkEvent::KnownConnections(known_connections)),
             ),
             NetworkCommand::ToggleVpn(vpn) => {
                 let mut active_vpn = self.active_connections.iter().find_map(|kc| match kc {
-                    ActiveConnectionInfo::Vpn { name, object_path } if name == &vpn.name => {
-                        Some(object_path.clone())
-                    }
+                    ActiveConnectionInfo::Vpn { name, object_path } if name == &vpn.name => Some(object_path.clone()),
                     _ => None,
                 });
 
@@ -668,9 +553,7 @@ impl Service for NetworkService {
                         debug!("VPN toggled: {res:?}");
                         res.unwrap_or_default()
                     },
-                    |known_connections| {
-                        ServiceEvent::Update(NetworkEvent::KnownConnections(known_connections))
-                    },
+                    |known_connections| ServiceEvent::Update(NetworkEvent::KnownConnections(known_connections)),
                 )
             }
         }

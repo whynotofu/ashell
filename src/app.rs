@@ -23,8 +23,7 @@ use crate::{
 };
 use flexi_logger::LoggerHandle;
 use iced::{
-    Alignment, Element, Length, OutputEvent, Subscription, SurfaceId, Task, Theme,
-    set_exclusive_zone,
+    Alignment, Element, Length, OutputEvent, Subscription, SurfaceId, Task, Theme, set_exclusive_zone,
     widget::{Row, container, mouse_area},
 };
 use log::{info, warn};
@@ -83,15 +82,9 @@ pub enum Message {
 }
 
 impl App {
-    pub fn new(
-        (logger, config, config_path): (LoggerHandle, Config, PathBuf),
-    ) -> impl FnOnce() -> (Self, Task<Message>) {
+    pub fn new((logger, config, config_path): (LoggerHandle, Config, PathBuf)) -> impl FnOnce() -> (Self, Task<Message>) {
         move || {
-            let outputs = Outputs::new(
-                config.appearance.style,
-                config.layer,
-                config.appearance.scale_factor,
-            );
+            let outputs = Outputs::new(config.appearance.style, config.layer, config.appearance.scale_factor);
 
             init_theme(AshellTheme::new(&config.appearance));
             init_localizer(resolve_localizer(&config));
@@ -132,32 +125,21 @@ impl App {
         };
 
         // ignore task, since config change should not generate any
-        let _ = self
-            .workspaces
-            .update(modules::workspaces::Message::ConfigReloaded(
-                config.workspaces,
-            ))
-            .map(Message::Workspaces);
+        let _ =
+            self.workspaces.update(modules::workspaces::Message::ConfigReloaded(config.workspaces)).map(Message::Workspaces);
 
-        self.window_title
-            .update(modules::window_title::Message::ConfigReloaded(
-                config.window_title,
-            ));
+        self.window_title.update(modules::window_title::Message::ConfigReloaded(config.window_title));
 
         self.system_info = SystemInfo::new();
 
         let _ = self
             .keyboard_layout
-            .update(modules::keyboard_layout::Message::ConfigReloaded(
-                config.keyboard_layout,
-            ))
+            .update(modules::keyboard_layout::Message::ConfigReloaded(config.keyboard_layout))
             .map(Message::KeyboardLayout);
 
         self.keyboard_submap = KeyboardSubmap::default();
-        self.clock
-            .update(modules::clock::Message::ConfigReloaded(config.clock));
-        self.settings
-            .update(modules::settings::Message::ConfigReloaded(config.settings));
+        self.clock.update(modules::clock::Message::ConfigReloaded(config.clock));
+        self.settings.update(modules::settings::Message::ConfigReloaded(config.settings));
         self.osd.update(osd::Message::ConfigReloaded(config.osd));
     }
 
@@ -205,21 +187,14 @@ impl App {
                         self.clock.update(clock::Message::Reset);
                     }
                     MenuType::Settings => {
-                        cmd.push(
-                            match self.settings.update(modules::settings::Message::MenuOpened) {
-                                modules::settings::Action::Command(task) => {
-                                    task.map(Message::Settings)
-                                }
-                                _ => Task::none(),
-                            },
-                        );
+                        cmd.push(match self.settings.update(modules::settings::Message::MenuOpened) {
+                            modules::settings::Action::Command(task) => task.map(Message::Settings),
+                            _ => Task::none(),
+                        });
                     }
                     _ => {}
                 };
-                cmd.push(
-                    self.outputs
-                        .toggle_menu(id, menu_type, button_ui_ref, false),
-                );
+                cmd.push(self.outputs.toggle_menu(id, menu_type, button_ui_ref, false));
 
                 Task::batch(cmd)
             }
@@ -233,10 +208,7 @@ impl App {
                 self.system_info.update(msg);
                 Task::none()
             }
-            Message::KeyboardLayout(message) => self
-                .keyboard_layout
-                .update(message)
-                .map(Message::KeyboardLayout),
+            Message::KeyboardLayout(message) => self.keyboard_layout.update(message).map(Message::KeyboardLayout),
             Message::KeyboardSubmap(message) => {
                 self.keyboard_submap.update(message);
                 Task::none()
@@ -259,23 +231,16 @@ impl App {
                     if self.osd.config().enabled
                         && !self.outputs.menu_is_open()
                         && let Some(osd) = osd
-                        && let osd::Action::Show(timer) = self.osd.update(osd::Message::Show(osd))
                     {
-                        tasks.push(timer.map(Message::Osd));
-                        tasks.push(self.outputs.show_osd_layer(OSD_WIDTH, OSD_HEIGHT));
+                        tasks.push(Task::done(Message::Osd(osd::Message::Show(osd))));
                     }
                     Task::batch(tasks)
                 }
-                modules::settings::Action::CloseMenu(id) => {
-                    self.outputs.close_menu(id, None, false)
-                }
+                modules::settings::Action::CloseMenu(id) => self.outputs.close_menu(id, None, false),
                 modules::settings::Action::RequestKeyboard(id) => self.outputs.request_keyboard(id),
                 modules::settings::Action::ReleaseKeyboard(id) => self.outputs.release_keyboard(id),
                 modules::settings::Action::ReleaseKeyboardWithCommand(id, task) => {
-                    Task::batch(vec![
-                        task.map(Message::Settings),
-                        self.outputs.release_keyboard(id),
-                    ])
+                    Task::batch(vec![task.map(Message::Settings), self.outputs.release_keyboard(id)])
                 }
             },
             Message::OutputEvent(event) => match event {
@@ -300,12 +265,7 @@ impl App {
                 OutputEvent::Removed(output_id) => {
                     info!("Output destroyed");
                     let (bar_style, scale_factor) = use_theme(|t| (t.bar_style, t.scale_factor));
-                    self.outputs.remove(
-                        bar_style,
-                        self.general_config.layer,
-                        output_id,
-                        scale_factor,
-                    )
+                    self.outputs.remove(bar_style, self.general_config.layer, output_id, scale_factor)
                 }
                 OutputEvent::InfoChanged(_) => Task::none(),
             },
@@ -328,9 +288,7 @@ impl App {
                     IpcCommand::VolumeToggleMute { .. } => self.settings.toggle_mute(),
                     IpcCommand::MicrophoneUp { .. } => self.settings.microphone_adjust(true),
                     IpcCommand::MicrophoneDown { .. } => self.settings.microphone_adjust(false),
-                    IpcCommand::MicrophoneToggleMute { .. } => {
-                        self.settings.microphone_toggle_mute()
-                    }
+                    IpcCommand::MicrophoneToggleMute { .. } => self.settings.microphone_toggle_mute(),
                     IpcCommand::BrightnessUp { .. } => self.settings.brightness_adjust(true),
                     IpcCommand::BrightnessDown { .. } => self.settings.brightness_adjust(false),
                     IpcCommand::ToggleAirplaneMode { .. } => self.settings.toggle_airplane(),
@@ -343,17 +301,20 @@ impl App {
                     }
                     // Show OSD overlay if enabled.
                     if self.osd.config().enabled
+                        && !self.outputs.menu_is_open()
                         && !cmd.no_osd()
                         && let Some(osd) = osd
-                        && let osd::Action::Show(timer) = self.osd.update(osd::Message::Show(osd))
                     {
-                        tasks.push(timer.map(Message::Osd));
-                        tasks.push(self.outputs.show_osd_layer(OSD_WIDTH, OSD_HEIGHT));
+                        tasks.push(Task::done(Message::Osd(osd::Message::Show(osd))));
                     }
                 }
                 Task::batch(tasks)
             }
             Message::Osd(msg) => match self.osd.update(msg) {
+                osd::Action::Show(timer) => Task::batch(vec![
+                    timer.map(Message::Osd),
+                    self.outputs.show_osd_layer(OSD_WIDTH, OSD_HEIGHT),
+                ]),
                 osd::Action::Hide => self.outputs.hide_osd_layer(),
                 _ => Task::none(),
             },
@@ -376,9 +337,7 @@ impl App {
                     self.outputs
                         .iter()
                         .filter_map(|(_, shell_info, _)| {
-                            shell_info
-                                .as_ref()
-                                .map(|info| set_exclusive_zone(info.id, height as i32))
+                            shell_info.as_ref().map(|info| set_exclusive_zone(info.id, height as i32))
                         })
                         .collect::<Vec<_>>(),
                 )
@@ -400,8 +359,7 @@ impl App {
 
                 let [left, center, right] = self.modules_section(id);
 
-                let (space, bar_style, opacity, menu) =
-                    use_theme(|t| (t.space, t.bar_style, t.opacity, t.menu));
+                let (space, bar_style, opacity, menu) = use_theme(|t| (t.space, t.bar_style, t.opacity, t.menu));
                 let centerbox = Centerbox::new([left, center, right])
                     .spacing(space.xxs)
                     .width(Length::Fill)
@@ -422,12 +380,7 @@ impl App {
                     background: match bar_style {
                         AppearanceStyle::Solid => Some({
                             let bg = t.palette().background.scale_alpha(opacity);
-                            if menu_is_open {
-                                darken_color(bg, menu.backdrop)
-                            } else {
-                                bg
-                            }
-                            .into()
+                            if menu_is_open { darken_color(bg, menu.backdrop) } else { bg }.into()
                         }),
                         AppearanceStyle::Islands => {
                             if menu_is_open {
@@ -441,9 +394,7 @@ impl App {
                 });
 
                 if self.outputs.menu_is_open() {
-                    mouse_area(status_bar)
-                        .on_release(Message::CloseMenu(id))
-                        .into()
+                    mouse_area(status_bar).on_release(Message::CloseMenu(id)).into()
                 } else {
                     status_bar.into()
                 }
@@ -451,19 +402,11 @@ impl App {
             Some(HasOutput::Menu(Some(open_menu))) => {
                 let ui_ref = open_menu.button_ui_ref;
                 match &open_menu.menu_type {
-                    MenuType::Settings => self.menu_wrapper(
-                        id,
-                        self.settings.menu_view(id).map(Message::Settings),
-                        ui_ref,
-                    ),
-                    MenuType::SystemInfo => self.menu_wrapper(
-                        id,
-                        self.system_info.menu_view().map(Message::SystemInfo),
-                        ui_ref,
-                    ),
-                    MenuType::Clock => {
-                        self.menu_wrapper(id, self.clock.menu_view().map(Message::Clock), ui_ref)
+                    MenuType::Settings => self.menu_wrapper(id, self.settings.menu_view(id).map(Message::Settings), ui_ref),
+                    MenuType::SystemInfo => {
+                        self.menu_wrapper(id, self.system_info.menu_view().map(Message::SystemInfo), ui_ref)
                     }
+                    MenuType::Clock => self.menu_wrapper(id, self.clock.menu_view().map(Message::Clock), ui_ref),
                 }
             }
             Some(HasOutput::Menu(None)) => Row::new().into(),

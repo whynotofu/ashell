@@ -21,28 +21,22 @@ pub fn quick_setting_button<'a, Msg: Clone + 'static>(
     on_right_press: Option<Msg>,
     with_submenu: Option<(SubMenu, Option<SubMenu>, Msg)>,
 ) -> Element<'a, Msg> {
-    let (space, font_size, submenu_btn_style, settings_btn_style, icon_container_style) =
-        use_theme(|theme| {
-            (
-                theme.space,
-                theme.font_size,
-                theme.quick_settings_submenu_button_style(active),
-                theme.quick_settings_button_style(active),
-                theme.quick_settings_icon_container_style(active),
-            )
-        });
+    let (space, font_size, submenu_btn_style, settings_btn_style, icon_container_style) = use_theme(|theme| {
+        (
+            theme.space,
+            theme.font_size,
+            theme.quick_settings_submenu_button_style(active),
+            theme.quick_settings_button_style(active),
+            theme.quick_settings_icon_container_style(active),
+        )
+    });
 
     let main_content = row!(
-        container(icon.into().to_text().size(font_size.lg))
-            .center_x(32.)
-            .center_y(32.)
-            .style(icon_container_style),
+        container(icon.into().to_text().size(font_size.lg)).center_x(32.).center_y(32.).style(icon_container_style),
         container(
             Column::with_capacity(2)
                 .push(text(title).size(font_size.sm))
-                .push(
-                    subtitle.map(|s| { text(s).wrapping(text::Wrapping::None).size(font_size.xs) })
-                )
+                .push(subtitle.map(|s| { text(s).wrapping(text::Wrapping::None).size(font_size.xs) }))
                 .spacing(space.xxs)
         )
         .clip(true)
@@ -69,10 +63,7 @@ pub fn quick_setting_button<'a, Msg: Clone + 'static>(
             .align_y(Alignment::Center)
             .height(Length::Fill)
     } else {
-        Row::with_capacity(1)
-            .push(main_content)
-            .align_y(Alignment::Center)
-            .height(Length::Fill)
+        Row::with_capacity(1).push(main_content).align_y(Alignment::Center).height(Length::Fill)
     };
 
     let btn = button(content)

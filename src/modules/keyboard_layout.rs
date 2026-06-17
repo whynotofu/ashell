@@ -21,10 +21,7 @@ pub struct KeyboardLayout {
 
 impl KeyboardLayout {
     pub fn new(config: KeyboardLayoutModuleConfig) -> Self {
-        Self {
-            config,
-            service: None,
-        }
+        Self { config, service: None }
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -43,9 +40,7 @@ impl KeyboardLayout {
             }
             Message::ChangeLayout => {
                 if let Some(service) = &mut self.service {
-                    return service
-                        .command(CompositorCommand::NextLayout)
-                        .map(Message::ServiceEvent);
+                    return service.command(CompositorCommand::NextLayout).map(Message::ServiceEvent);
                 }
                 Task::none()
             }

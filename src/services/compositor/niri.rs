@@ -1,6 +1,6 @@
 use super::types::{
-    ActiveWindow, ActiveWindowNiri, CompositorCommand, CompositorEvent, CompositorMonitor,
-    CompositorService, CompositorState, CompositorWorkspace,
+    ActiveWindow, ActiveWindowNiri, CompositorCommand, CompositorEvent, CompositorMonitor, CompositorService, CompositorState,
+    CompositorWorkspace,
 };
 use crate::services::ServiceEvent;
 use anyhow::{Context, Result, anyhow};
@@ -25,10 +25,7 @@ pub async fn execute_command(cmd: CompositorCommand) -> Result<()> {
                 reference: WorkspaceReferenceArg::Id(id),
             },
             Err(_) => {
-                return Err(anyhow!(
-                    "Workspace ID {} is out of range for Niri backend",
-                    id
-                ));
+                return Err(anyhow!("Workspace ID {} is out of range for Niri backend", id));
             }
         },
         CompositorCommand::FocusSpecialWorkspace(_) => {
@@ -52,9 +49,7 @@ pub async fn execute_command(cmd: CompositorCommand) -> Result<()> {
         },
         CompositorCommand::CustomDispatch(action, args) => {
             if action == "spawn" {
-                Action::Spawn {
-                    command: vec![args],
-                }
+                Action::Spawn { command: vec![args] }
             } else {
                 return Err(anyhow!("Unknown custom dispatch: {}", action));
             }
@@ -66,9 +61,7 @@ pub async fn execute_command(cmd: CompositorCommand) -> Result<()> {
 }
 
 pub fn is_available() -> bool {
-    env::var_os("NIRI_SOCKET")
-        .or_else(|| env::var_os("NIRI_SOCKET_PATH"))
-        .is_some()
+    env::var_os("NIRI_SOCKET").or_else(|| env::var_os("NIRI_SOCKET_PATH")).is_some()
 }
 
 pub async fn run_listener(tx: &broadcast::Sender<ServiceEvent<CompositorService>>) -> Result<()> {
@@ -129,9 +122,7 @@ pub async fn run_listener(tx: &broadcast::Sender<ServiceEvent<CompositorService>
         let state = map_state(&internal_state);
 
         // Emit Update
-        let _ = tx.send(ServiceEvent::Update(CompositorEvent::StateChanged(
-            Box::new(state),
-        )));
+        let _ = tx.send(ServiceEvent::Update(CompositorEvent::StateChanged(Box::new(state))));
     }
 
     Ok(())
@@ -178,10 +169,7 @@ fn map_state(niri: &EventStreamState) -> CompositorState {
         .collect();
 
     // INFO: this is how niri sorts the outpus internally (niri msg outputs - in client.rs)
-    let outputs = output_to_active_ws
-        .keys()
-        .sorted_unstable()
-        .collect::<Vec<_>>();
+    let outputs = output_to_active_ws.keys().sorted_unstable().collect::<Vec<_>>();
 
     let mut workspaces: Vec<CompositorWorkspace> = niri
         .workspaces
@@ -195,12 +183,7 @@ fn map_state(niri: &EventStreamState) -> CompositorState {
                 name: w.name.clone().unwrap_or_else(|| w.idx.to_string()),
                 monitor: w.output.clone().unwrap_or_default(),
                 // niri does not have an output index
-                monitor_id: w.output.as_ref().map(|wo| {
-                    outputs
-                        .iter()
-                        .position(|o| *o == wo)
-                        .map_or(-1, |i| i as i32) as i128
-                }),
+                monitor_id: w.output.as_ref().map(|wo| outputs.iter().position(|o| *o == wo).map_or(-1, |i| i as i32) as i128),
                 windows: 0,
                 is_special: false,
             }
@@ -230,34 +213,19 @@ fn map_state(niri: &EventStreamState) -> CompositorState {
         })
         .collect();
 
-    let active_workspace_id = niri
-        .workspaces
-        .workspaces
-        .values()
-        .find(|w| w.is_focused)
-        .map(|w| w.id as i32);
+    let active_workspace_id = niri.workspaces.workspaces.values().find(|w| w.is_focused).map(|w| w.id as i32);
 
-    let active_window = niri
-        .windows
-        .windows
-        .values()
-        .find(|w| w.is_focused)
-        .map(|w| {
-            ActiveWindow::Niri(ActiveWindowNiri {
-                title: w.title.clone().unwrap_or_default(),
-                class: w.app_id.clone().unwrap_or_default(),
-                address: w.id.to_string(),
-            })
-        });
+    let active_window = niri.windows.windows.values().find(|w| w.is_focused).map(|w| {
+        ActiveWindow::Niri(ActiveWindowNiri {
+            title: w.title.clone().unwrap_or_default(),
+            class: w.app_id.clone().unwrap_or_default(),
+            address: w.id.to_string(),
+        })
+    });
 
     let keyboard_layout = niri.keyboard_layouts.keyboard_layouts.as_ref().map_or_else(
         || "Unknown".to_string(),
-        |k| {
-            k.names
-                .get(k.current_idx as usize)
-                .cloned()
-                .unwrap_or_else(|| "Unknown".to_string())
-        },
+        |k| k.names.get(k.current_idx as usize).cloned().unwrap_or_else(|| "Unknown".to_string()),
     );
 
     CompositorState {

@@ -5,9 +5,8 @@ use crate::theme::{backdrop_color, use_theme};
 use iced::alignment::Vertical;
 use iced::widget::container::Style;
 use iced::{
-    Anchor, Border, Element, KeyboardInteractivity, Layer, LayerShellSettings, Length, OutputId,
-    Padding, Pixels, SurfaceId, Task, Theme, destroy_layer_surface, new_layer_surface,
-    set_keyboard_interactivity, widget::container,
+    Anchor, Border, Element, KeyboardInteractivity, Layer, LayerShellSettings, Length, OutputId, Padding, Pixels, SurfaceId,
+    Task, Theme, destroy_layer_surface, new_layer_surface, set_keyboard_interactivity, widget::container,
 };
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -163,15 +162,8 @@ impl App {
         content: Element<'a, app::Message>,
         button_ui_ref: ButtonUIRef,
     ) -> Element<'a, app::Message> {
-        let (space, menu_opacity, radius, bar_style, menu_backdrop) = use_theme(|t| {
-            (
-                t.space,
-                t.menu.opacity,
-                t.radius,
-                t.bar_style,
-                t.menu.backdrop,
-            )
-        });
+        let (space, menu_opacity, radius, bar_style, menu_backdrop) =
+            use_theme(|t| (t.space, t.menu.opacity, t.radius, t.bar_style, t.menu.backdrop));
 
         components::MenuWrapper::new(
             button_ui_ref.position.x,
@@ -180,12 +172,7 @@ impl App {
                 .style(move |theme: &Theme| Style {
                     background: Some(theme.palette().background.scale_alpha(menu_opacity).into()),
                     border: Border {
-                        color: theme
-                            .extended_palette()
-                            .background
-                            .weakest
-                            .color
-                            .scale_alpha(menu_opacity),
+                        color: theme.extended_palette().background.weakest.color.scale_alpha(menu_opacity),
                         width: 1.,
                         radius: radius.xl.into(),
                     },

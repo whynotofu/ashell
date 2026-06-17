@@ -70,28 +70,19 @@ impl<'a, Msg: 'static + Clone> From<SliderControl<'a, Msg>> for Element<'a, Msg>
                 btn.into()
             }
         } else {
-            iced::widget::container(ctrl.icon.to_text_mono())
-                .center_x(32.)
-                .center_y(32.)
-                .clip(true)
-                .into()
+            iced::widget::container(ctrl.icon.to_text_mono()).center_x(32.).center_y(32.).clip(true).into()
         };
 
         let slider_element = MouseArea::new(
             Element::<'a, remote_value::Message<u32>>::from(
-                slider(ctrl.range, ctrl.value, remote_value::Message::Request)
-                    .on_release(remote_value::Message::Timeout),
+                slider(ctrl.range, ctrl.value, remote_value::Message::Request).on_release(remote_value::Message::Timeout),
             )
             .map(move |msg| (ctrl.on_change)(msg, false)),
         )
         .on_scroll(ctrl.on_scroll);
 
         let trailing: Option<Element<'a, Msg>> = ctrl.trailing_toggle.map(|(expanded, msg)| {
-            let trailing_icon = if expanded {
-                StaticIcon::Close
-            } else {
-                StaticIcon::RightArrow
-            };
+            let trailing_icon = if expanded { StaticIcon::Close } else { StaticIcon::RightArrow };
             icon_button(trailing_icon).on_press(msg).into()
         });
 

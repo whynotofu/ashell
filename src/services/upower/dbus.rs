@@ -115,10 +115,7 @@ impl SystemBattery {
     }
 
     pub fn get_devices_path(self) -> Vec<ObjectPath<'static>> {
-        self.0
-            .into_iter()
-            .map(|device| device.inner().path().to_owned())
-            .collect()
+        self.0.into_iter().map(|device| device.inner().path().to_owned()).collect()
     }
 }
 
@@ -279,42 +276,28 @@ impl UPowerDbus<'_> {
     }
 
     pub async fn get_system_batteries(&self) -> anyhow::Result<Option<SystemBattery>> {
-        self.get_battery_devices(|device_type, power_supply| {
-            device_type.is_power_source() && power_supply
-        })
-        .await
-        .map(|devices| {
-            if !devices.is_empty() {
-                Some(SystemBattery(devices))
-            } else {
-                None
-            }
-        })
+        self.get_battery_devices(|device_type, power_supply| device_type.is_power_source() && power_supply).await.map(
+            |devices| {
+                if !devices.is_empty() {
+                    Some(SystemBattery(devices))
+                } else {
+                    None
+                }
+            },
+        )
     }
 
     pub async fn get_peripheral_batteries(&self) -> anyhow::Result<Vec<DeviceProxy<'static>>> {
-        self.get_battery_devices(|device_type, power_supply| {
-            device_type.is_peripheral() && !power_supply
-        })
-        .await
+        self.get_battery_devices(|device_type, power_supply| device_type.is_peripheral() && !power_supply).await
     }
 
-    pub async fn get_device(
-        &self,
-        path: &ObjectPath<'static>,
-    ) -> anyhow::Result<DeviceProxy<'static>> {
-        let device = DeviceProxy::builder(self.inner().connection())
-            .path(path)?
-            .build()
-            .await?;
+    pub async fn get_device(&self, path: &ObjectPath<'static>) -> anyhow::Result<DeviceProxy<'static>> {
+        let device = DeviceProxy::builder(self.inner().connection()).path(path)?.build().await?;
 
         Ok(device)
     }
 
-    async fn get_battery_devices(
-        &self,
-        f: fn(UpDeviceKind, bool) -> bool,
-    ) -> anyhow::Result<Vec<DeviceProxy<'static>>> {
+    async fn get_battery_devices(&self, f: fn(UpDeviceKind, bool) -> bool) -> anyhow::Result<Vec<DeviceProxy<'static>>> {
         let devices = self.enumerate_devices().await?;
 
         debug!("Found {} devices", devices.len());
@@ -322,16 +305,9 @@ impl UPowerDbus<'_> {
         let mut res = Vec::new();
 
         for device in devices {
-            let device = DeviceProxy::builder(self.inner().connection())
-                .path(device)?
-                .build()
-                .await?;
+            let device = DeviceProxy::builder(self.inner().connection()).path(device)?.build().await?;
 
-            let device_type = device
-                .device_type()
-                .await?
-                .try_into()
-                .unwrap_or(UpDeviceKind::Unknown);
+            let device_type = device.device_type().await?.try_into().unwrap_or(UpDeviceKind::Unknown);
 
             let power_supply = device.power_supply().await?;
 

@@ -2,8 +2,8 @@ use iced::{Subscription, Task};
 
 pub mod audio;
 pub mod bluetooth;
-pub mod brightness;
 pub mod compositor;
+pub mod device;
 pub mod idle_inhibitor;
 pub mod logind;
 pub mod network;

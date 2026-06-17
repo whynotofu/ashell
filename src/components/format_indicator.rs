@@ -1,6 +1,4 @@
-use crate::{
-    components::icons::IconKind, config::SettingsFormat, theme::use_theme, utils::IndicatorState,
-};
+use crate::{components::icons::IconKind, config::SettingsFormat, theme::use_theme, utils::IndicatorState};
 use iced::{
     Alignment, Element, Theme,
     mouse::ScrollDelta,
@@ -52,10 +50,7 @@ impl<'a, Msg: 'static + Clone> From<FormatIndicator<'a, Msg>> for Element<'a, Ms
             SettingsFormat::Icon => fi.icon.to_text().into(),
             SettingsFormat::Percentage | SettingsFormat::Time => fi.label_element,
             SettingsFormat::IconAndPercentage | SettingsFormat::IconAndTime => {
-                row![fi.icon.to_text(), fi.label_element]
-                    .spacing(space.xxs)
-                    .align_y(Alignment::Center)
-                    .into()
+                row![fi.icon.to_text(), fi.label_element].spacing(space.xxs).align_y(Alignment::Center).into()
             }
         };
 

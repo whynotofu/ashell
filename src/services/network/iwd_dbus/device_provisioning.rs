@@ -18,10 +18,7 @@
 //! [Writing a client proxy]: https://dbus2.github.io/zbus/client.html
 //! [D-Bus standard interfaces]: https://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces,
 use zbus::proxy;
-#[proxy(
-    interface = "net.connman.iwd.DeviceProvisioning",
-    assume_defaults = true
-)]
+#[proxy(interface = "net.connman.iwd.DeviceProvisioning", assume_defaults = true)]
 pub trait DeviceProvisioning {
     /// `ConfigureEnrollee` method
     fn configure_enrollee(&self, uri: &str) -> zbus::Result<()>;

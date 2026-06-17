@@ -86,10 +86,7 @@ where
         self
     }
 
-    pub fn on_press_with_position(
-        mut self,
-        on_press: impl Fn(ButtonUIRef) -> Message + 'a,
-    ) -> Self {
+    pub fn on_press_with_position(mut self, on_press: impl Fn(ButtonUIRef) -> Message + 'a) -> Self {
         self.on_press = Some(OnPress::MessageWithPosition(Box::new(on_press)));
         self
     }
@@ -161,8 +158,7 @@ struct State {
     is_focused: bool,
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for PositionButton<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for PositionButton<'a, Message, Theme, Renderer>
 where
     Message: 'a + Clone,
     Renderer: 'a + iced::core::Renderer,
@@ -191,34 +187,16 @@ where
         }
     }
 
-    fn layout(
-        &mut self,
-        tree: &mut Tree,
-        renderer: &Renderer,
-        limits: &layout::Limits,
-    ) -> layout::Node {
+    fn layout(&mut self, tree: &mut Tree, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
         layout::padded(limits, self.width, self.height, self.padding, |limits| {
-            self.content
-                .as_widget_mut()
-                .layout(&mut tree.children[0], renderer, limits)
+            self.content.as_widget_mut().layout(&mut tree.children[0], renderer, limits)
         })
     }
 
-    fn operate(
-        &mut self,
-        tree: &mut Tree,
-        layout: Layout<'_>,
-        renderer: &Renderer,
-        operation: &mut dyn Operation,
-    ) {
+    fn operate(&mut self, tree: &mut Tree, layout: Layout<'_>, renderer: &Renderer, operation: &mut dyn Operation) {
         operation.container(None, layout.bounds());
         operation.traverse(&mut |operation| {
-            self.content.as_widget_mut().operate(
-                &mut tree.children[0],
-                layout.children().next().unwrap(),
-                renderer,
-                operation,
-            );
+            self.content.as_widget_mut().operate(&mut tree.children[0], layout.children().next().unwrap(), renderer, operation);
         });
     }
 
@@ -264,9 +242,7 @@ where
                     return;
                 }
             }
-            event::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right))
-                if self.on_right_press.is_some() =>
-            {
+            event::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) if self.on_right_press.is_some() => {
                 let bounds = layout.bounds();
 
                 if cursor.is_over(bounds) {
@@ -340,9 +316,7 @@ where
             event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) => {
                 if let Some(on_press) = self.on_press.as_ref() {
                     let state = tree.state.downcast_mut::<State>();
-                    if state.is_focused
-                        && matches!(key, keyboard::Key::Named(keyboard::key::Named::Enter))
-                    {
+                    if state.is_focused && matches!(key, keyboard::Key::Named(keyboard::key::Named::Enter)) {
                         state.is_pressed = true;
                         match on_press {
                             OnPress::Message(message) => {
@@ -364,8 +338,7 @@ where
                     }
                 }
             }
-            event::Event::Touch(touch::Event::FingerLost { .. })
-            | event::Event::Mouse(mouse::Event::CursorLeft) => {
+            event::Event::Touch(touch::Event::FingerLost { .. }) | event::Event::Mouse(mouse::Event::CursorLeft) => {
                 let state = tree.state.downcast_mut::<State>();
                 state.is_hovered = false;
                 state.is_pressed = false;
@@ -399,11 +372,7 @@ where
         let status = if self.on_press.is_none() {
             Status::Disabled
         } else if state.is_hovered {
-            if state.is_pressed {
-                Status::Pressed
-            } else {
-                Status::Hovered
-            }
+            if state.is_pressed { Status::Pressed } else { Status::Hovered }
         } else {
             Status::Active
         };
@@ -418,9 +387,7 @@ where
                     shadow: style.shadow,
                     snap: true,
                 },
-                style
-                    .background
-                    .unwrap_or(Background::Color(Color::TRANSPARENT)),
+                style.background.unwrap_or(Background::Color(Color::TRANSPARENT)),
             );
         }
 
@@ -478,8 +445,7 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<PositionButton<'a, Message, Theme, Renderer>>
-    for Element<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> From<PositionButton<'a, Message, Theme, Renderer>> for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
     Theme: Catalog + 'a,

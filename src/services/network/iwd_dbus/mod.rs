@@ -97,9 +97,7 @@ impl super::NetworkBackend for IwdDbus<'_> {
         let nm = self;
 
         // airplane mode
-        let bluetooth_soft_blocked = BluetoothService::check_rfkill_soft_block()
-            .await
-            .unwrap_or_default();
+        let bluetooth_soft_blocked = BluetoothService::check_rfkill_soft_block().await.unwrap_or_default();
 
         let wifi_present = nm.wifi_device_present().await?;
 
@@ -118,11 +116,8 @@ impl super::NetworkBackend for IwdDbus<'_> {
         let known_connections = nm.known_connections().await?;
         debug!("Known connections: {known_connections:?}");
 
-        let is_scanning = join_all(self.stations().await?.iter().map(|s| s.scanning()))
-            .await
-            .into_iter()
-            .filter_map(|v| v.ok())
-            .any(|v| v);
+        let is_scanning =
+            join_all(self.stations().await?.iter().map(|s| s.scanning())).await.into_iter().filter_map(|v| v.ok()).any(|v| v);
 
         Ok(super::NetworkData {
             wifi_present,
@@ -181,10 +176,7 @@ impl super::NetworkBackend for IwdDbus<'_> {
 
             networks.insert(ssid, access_point);
         }
-        Ok(networks
-            .into_values()
-            .map(KnownConnection::AccessPoint)
-            .collect())
+        Ok(networks.into_values().map(KnownConnection::AccessPoint).collect())
     }
 
     async fn scan_nearby_wifi(&self) -> anyhow::Result<()> {
@@ -206,18 +198,13 @@ impl super::NetworkBackend for IwdDbus<'_> {
         Ok(())
     }
 
-    async fn select_access_point(
-        &self,
-        ap: &AccessPoint,
-        password: Option<String>,
-    ) -> anyhow::Result<()> {
+    async fn select_access_point(&self, ap: &AccessPoint, password: Option<String>) -> anyhow::Result<()> {
         // Get the agent manager
         let agent_manager = self.agent_manager().await?;
 
         // If password is provided, register a new agent to handle it
         if let Some(p) = password {
-            let path = OwnedObjectPath::try_from("/ashell/pwagent/main")
-                .expect("hardcoded valid D-Bus object path");
+            let path = OwnedObjectPath::try_from("/ashell/pwagent/main").expect("hardcoded valid D-Bus object path");
 
             match agent_manager.unregister_agent(&path).await {
                 Ok(_) => info!("Successfully unregistered agent at {path}"),
@@ -229,11 +216,7 @@ impl super::NetworkBackend for IwdDbus<'_> {
 
             // Register the new agent
             let pw_agent = PWAgent { password_rx };
-            self.inner()
-                .connection()
-                .object_server()
-                .at(path.clone(), pw_agent)
-                .await?;
+            self.inner().connection().object_server().at(path.clone(), pw_agent).await?;
 
             agent_manager.register_agent(&path).await?;
 
@@ -250,24 +233,14 @@ impl super::NetworkBackend for IwdDbus<'_> {
         Ok(())
     }
 
-    async fn set_vpn(
-        &self,
-        path: OwnedObjectPath,
-        enable: bool,
-    ) -> anyhow::Result<Vec<KnownConnection>> {
+    async fn set_vpn(&self, path: OwnedObjectPath, enable: bool) -> anyhow::Result<Vec<KnownConnection>> {
         // IWD doesn't natively support VPN management
         // This would need to be implemented with additional VPN management tools
-        Err(anyhow::anyhow!(
-            "VPN management not implemented for IWD backend"
-        ))
+        Err(anyhow::anyhow!("VPN management not implemented for IWD backend"))
     }
 
     async fn set_airplane_mode(&self, airplane: bool) -> anyhow::Result<()> {
-        Command::new("/usr/sbin/rfkill")
-            .arg(if airplane { "block" } else { "unblock" })
-            .arg("bluetooth")
-            .output()
-            .await?;
+        Command::new("/usr/sbin/rfkill").arg(if airplane { "block" } else { "unblock" }).arg("bluetooth").output().await?;
         self.set_wifi_enabled(!airplane).await?;
         Ok(())
     }
@@ -334,16 +307,14 @@ impl Drop for SignalAgentCleanup {
         let agent_path = self.agent_path.clone();
 
         tokio::spawn(async move {
-            let station = match StationProxy::builder(&conn)
-                .destination("net.connman.iwd")
-                .and_then(|b| b.path(station_path.clone()))
-            {
-                Ok(builder) => match builder.build().await {
-                    Ok(station) => station,
+            let station =
+                match StationProxy::builder(&conn).destination("net.connman.iwd").and_then(|b| b.path(station_path.clone())) {
+                    Ok(builder) => match builder.build().await {
+                        Ok(station) => station,
+                        Err(_) => return,
+                    },
                     Err(_) => return,
-                },
-                Err(_) => return,
-            };
+                };
 
             let _ = station.unregister_signal_level_agent(&agent_path).await;
         });
@@ -356,11 +327,7 @@ impl SignalAgent {
     #[zbus(name = "Changed")]
     fn changed(&self, path: OwnedObjectPath, level: u8) {
         // ignore failure if receiver was dropped
-        debug!(
-            "SignalLevelAgent::Changed path={} level={}",
-            path.as_str(),
-            level
-        );
+        debug!("SignalLevelAgent::Changed path={} level={}", path.as_str(), level);
         let _ = self.tx.send((path, level));
     }
 }
@@ -373,10 +340,7 @@ struct PWAgent {
 #[interface(name = "net.connman.iwd.Agent")]
 impl PWAgent {
     #[zbus(name = "RequestPassphrase")]
-    async fn request_passphrase(
-        &mut self,
-        _network_path: OwnedObjectPath,
-    ) -> zbus::fdo::Result<String> {
+    async fn request_passphrase(&mut self, _network_path: OwnedObjectPath) -> zbus::fdo::Result<String> {
         // Try to receive a password from the channel
         if let Ok(pass) = self.password_rx.try_recv() {
             Ok(pass)
@@ -391,11 +355,7 @@ impl PWAgent {
 impl IwdDbus<'_> {
     /// Connect to the system bus and the IWD service.
     pub async fn new(conn: &zbus::Connection) -> anyhow::Result<Self> {
-        let manager = ObjectManagerProxy::builder(conn)
-            .destination("net.connman.iwd")?
-            .path("/")?
-            .build()
-            .await?;
+        let manager = ObjectManagerProxy::builder(conn).destination("net.connman.iwd")?.path("/")?.build().await?;
 
         Ok(Self { _inner: manager })
     }
@@ -415,24 +375,15 @@ impl IwdDbus<'_> {
     }
 
     pub async fn agent_manager(&'_ self) -> anyhow::Result<AgentManagerProxy<'_>> {
-        list_proxies!(
-            &self._inner,
-            "net.connman.iwd.AgentManager",
-            AgentManagerProxy
-        )
-        .await?
-        .first()
-        .cloned()
-        .ok_or_else(|| anyhow::anyhow!("No AgentManagerProxy found"))
+        list_proxies!(&self._inner, "net.connman.iwd.AgentManager", AgentManagerProxy)
+            .await?
+            .first()
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("No AgentManagerProxy found"))
     }
 
     pub async fn known_networks_proxies(&'_ self) -> anyhow::Result<Vec<KnownNetworkProxy<'_>>> {
-        list_proxies!(
-            &self._inner,
-            "net.connman.iwd.KnownNetwork",
-            KnownNetworkProxy
-        )
-        .await
+        list_proxies!(&self._inner, "net.connman.iwd.KnownNetwork", KnownNetworkProxy).await
     }
 
     pub async fn networks_proxies(&'_ self) -> anyhow::Result<Vec<NetworkProxy<'_>>> {
@@ -443,12 +394,7 @@ impl IwdDbus<'_> {
         // Note: AccessPoint interface might not be directly on the root object manager.
         // It might be associated with a Device or Station. This function assumes they might appear.
         // If this doesn't work as expected, the logic might need refinement based on IWD's structure.
-        list_proxies!(
-            &self._inner,
-            "net.connman.iwd.AccessPoint",
-            AccessPointProxy
-        )
-        .await
+        list_proxies!(&self._inner, "net.connman.iwd.AccessPoint", AccessPointProxy).await
     }
 
     pub async fn reachable_networks(&'_ self) -> anyhow::Result<Vec<(NetworkProxy<'_>, i16)>> {
@@ -522,9 +468,7 @@ impl IwdDbus<'_> {
                                     .collect::<Vec<super::ConnectivityState>>()
                                     .into(),
                             ),
-                            NetworkEvent::ActiveConnections(
-                                iwd.active_connections_info().await.unwrap_or_default(),
-                            ),
+                            NetworkEvent::ActiveConnections(iwd.active_connections_info().await.unwrap_or_default()),
                         ]
                     }
                 })
@@ -571,22 +515,11 @@ impl IwdDbus<'_> {
             let agent = SignalAgent { tx };
 
             let station_path = station.inner().path().clone().into();
-            let station_id = station
-                .inner()
-                .path()
-                .as_str()
-                .trim_matches('/')
-                .replace('/', "_");
-            let agent_path =
-                OwnedObjectPath::try_from(format!("/com/ashell/signalagent/{station_id}"))?;
+            let station_id = station.inner().path().as_str().trim_matches('/').replace('/', "_");
+            let agent_path = OwnedObjectPath::try_from(format!("/com/ashell/signalagent/{station_id}"))?;
             let station_for_signal_stream = station.clone();
 
-            let server = self
-                .inner()
-                .connection()
-                .object_server()
-                .at(&agent_path, agent)
-                .await?;
+            let server = self.inner().connection().object_server().at(&agent_path, agent).await?;
             // 6) turn receiver into a Stream
             signal_level_updates.push(
                 UnboundedReceiverStream::new(rx)
@@ -615,8 +548,7 @@ impl IwdDbus<'_> {
                         if let Some(NetworkEvent::Strength((_, ssid, strength))) = events.first() {
                             debug!(
                                 "Emitting strength update for connected ssid='{}' mapped_percent={}",
-                                ssid,
-                                strength
+                                ssid, strength
                             );
                         }
                         events
@@ -629,9 +561,7 @@ impl IwdDbus<'_> {
             // Using NM linear mapping, this translates to RSSI thresholds:
             // 80% → -52 dBm, 55% → -67 dBm, 30% → -82 dBm, 5% → -97 dBm
             let signal_thresholds = [-52, -67, -82, -97];
-            station
-                .register_signal_level_agent(&agent_path, &signal_thresholds)
-                .await?;
+            station.register_signal_level_agent(&agent_path, &signal_thresholds).await?;
 
             signal_agent_cleanups.push(SignalAgentCleanup {
                 conn: self.inner().connection().clone(),

@@ -56,21 +56,16 @@ impl<'a, Msg: 'static + Clone> ModuleItem<'a, Msg> {
 
 impl<'a, Msg: 'static + Clone> From<ModuleItem<'a, Msg>> for Element<'a, Msg> {
     fn from(item: ModuleItem<'a, Msg>) -> Self {
-        let (space, module_button_style) =
-            use_theme(|theme| (theme.space, theme.module_button_style()));
+        let (space, module_button_style) = use_theme(|theme| (theme.space, theme.module_button_style()));
 
         let has_action = item.on_press.is_some() || item.on_press_with_position.is_some();
 
         if has_action {
-            let mut button = position_button(
-                container(item.content)
-                    .align_y(Alignment::Center)
+            let mut button =
+                position_button(container(item.content).align_y(Alignment::Center).height(Length::Fill).clip(true))
+                    .padding([2.0, space.xs])
                     .height(Length::Fill)
-                    .clip(true),
-            )
-            .padding([2.0, space.xs])
-            .height(Length::Fill)
-            .style(module_button_style);
+                    .style(module_button_style);
 
             if let Some(handler) = item.on_press_with_position {
                 button = button.on_press_with_position(handler);
@@ -90,12 +85,7 @@ impl<'a, Msg: 'static + Clone> From<ModuleItem<'a, Msg>> for Element<'a, Msg> {
 
             button.into()
         } else {
-            container(item.content)
-                .padding([2.0, space.xs])
-                .height(Length::Fill)
-                .align_y(Alignment::Center)
-                .clip(true)
-                .into()
+            container(item.content).padding([2.0, space.xs]).height(Length::Fill).align_y(Alignment::Center).clip(true).into()
         }
     }
 }

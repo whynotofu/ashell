@@ -33,11 +33,7 @@ impl FixedIp {
 
 impl std::fmt::Display for FixedIp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            std::str::from_utf8(&self.0[..self.1]).unwrap_or("")
-        )
+        write!(f, "{}", std::str::from_utf8(&self.0[..self.1]).unwrap_or(""))
     }
 }
 
@@ -54,10 +50,7 @@ struct SystemInfoData {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn get_system_info(
-    components: &mut Components,
-    (networks, last_check): (&mut Networks, Option<Instant>),
-) -> SystemInfoData {
+fn get_system_info(components: &mut Components, (networks, last_check): (&mut Networks, Option<Instant>)) -> SystemInfoData {
     components.refresh(true);
     networks.refresh(true);
 
@@ -66,11 +59,7 @@ fn get_system_info(
     let network = networks
         .iter()
         .filter(|(name, _)| {
-            name.contains("en")
-                || name.contains("eth")
-                || name.contains("wl")
-                || name.contains("wlan")
-                || name.contains("br")
+            name.contains("en") || name.contains("eth") || name.contains("wl") || name.contains("wlan") || name.contains("br")
         })
         .sorted_by_key(|(name, _)| {
             if name.contains("en") {
@@ -94,27 +83,15 @@ fn get_system_info(
 
             99
         })
-        .fold(
-            (None, 0, 0),
-            |(first_ip, total_received, total_transmitted), (_, data)| {
-                let ip = first_ip.or_else(|| {
-                    data.ip_networks()
-                        .iter()
-                        .sorted_by(|a, b| a.addr.cmp(&b.addr))
-                        .next()
-                        .map(|ip| ip.addr)
-                });
+        .fold((None, 0, 0), |(first_ip, total_received, total_transmitted), (_, data)| {
+            let ip =
+                first_ip.or_else(|| data.ip_networks().iter().sorted_by(|a, b| a.addr.cmp(&b.addr)).next().map(|ip| ip.addr));
 
-                let received = data.received();
-                let transmitted = data.transmitted();
+            let received = data.received();
+            let transmitted = data.transmitted();
 
-                (
-                    first_ip.or(ip),
-                    total_received + received,
-                    total_transmitted + transmitted,
-                )
-            },
-        );
+            (first_ip.or(ip), total_received + received, total_transmitted + transmitted)
+        });
 
     let network_speed = |value: u64| {
         match elapsed {
@@ -163,10 +140,7 @@ pub struct SystemInfo {
 impl SystemInfo {
     pub fn new() -> Self {
         let config = SystemInfoModuleConfig {
-            indicators: vec![
-                SystemInfoIndicator::DownloadSpeed,
-                SystemInfoIndicator::UploadSpeed,
-            ],
+            indicators: vec![SystemInfoIndicator::DownloadSpeed, SystemInfoIndicator::UploadSpeed],
             interval: 1,
         };
 
@@ -188,20 +162,13 @@ impl SystemInfo {
             Message::Update => {
                 self.data = get_system_info(
                     &mut self.components,
-                    (
-                        &mut self.networks,
-                        self.data.network.as_ref().map(|n| n.last_check),
-                    ),
+                    (&mut self.networks, self.data.network.as_ref().map(|n| n.last_check)),
                 );
             }
         }
     }
 
-    fn info_element<'a>(
-        info_icon: StaticIcon,
-        label: String,
-        value: String,
-    ) -> Element<'a, Message> {
+    fn info_element<'a>(info_icon: StaticIcon, label: String, value: String) -> Element<'a, Message> {
         let (font_size, space) = use_theme(|t| (t.font_size, t.space));
         row!(
             container(icon(info_icon).size(font_size.xl)).center_x(Length::Fixed(space.xl)),
@@ -300,11 +267,7 @@ impl SystemInfo {
                         } else {
                             network.download_speed
                         },
-                        if network.download_speed > 1000 {
-                            "MB/s"
-                        } else {
-                            "KB/s"
-                        },
+                        if network.download_speed > 1000 { "MB/s" } else { "KB/s" },
                     ),
                     None::<(u32, u32, u32)>,
                     None,
@@ -319,11 +282,7 @@ impl SystemInfo {
                         } else {
                             network.upload_speed
                         },
-                        if network.upload_speed > 1000 {
-                            "MB/s"
-                        } else {
-                            "KB/s"
-                        },
+                        if network.upload_speed > 1000 { "MB/s" } else { "KB/s" },
                     ),
                     None::<(u32, u32, u32)>,
                     None,
@@ -331,10 +290,7 @@ impl SystemInfo {
             }),
         });
 
-        Row::with_children(indicators)
-            .align_y(Alignment::Center)
-            .spacing(space.xxs)
-            .into()
+        Row::with_children(indicators).align_y(Alignment::Center).spacing(space.xxs).into()
     }
 
     pub fn subscription(&self) -> Subscription<Message> {

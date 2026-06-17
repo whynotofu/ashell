@@ -2,9 +2,7 @@ use crate::config::get_config;
 use crate::outputs::Outputs;
 use app::App;
 use clap::Parser;
-use flexi_logger::{
-    Age, Cleanup, Criterion, FileSpec, LogSpecBuilder, LogSpecification, Logger, Naming,
-};
+use flexi_logger::{Age, Cleanup, Criterion, FileSpec, LogSpecBuilder, LogSpecification, Logger, Naming};
 use iced::{Anchor, Font, KeyboardInteractivity, Layer, LayerShellSettings};
 use log::{debug, error, warn};
 use std::backtrace::Backtrace;
@@ -24,8 +22,7 @@ mod theme;
 mod utils;
 
 const NERD_FONT: &[u8] = include_bytes!("../target/generated/SymbolsNerdFont-Regular-Subset.ttf");
-const NERD_FONT_MONO: &[u8] =
-    include_bytes!("../target/generated/SymbolsNerdFontMono-Regular-Subset.ttf");
+const NERD_FONT_MONO: &[u8] = include_bytes!("../target/generated/SymbolsNerdFontMono-Regular-Subset.ttf");
 const CUSTOM_FONT: &[u8] = include_bytes!("../assets/AshellCustomIcon-Regular.otf");
 const HEIGHT: f64 = 34.;
 const TMP_FILE_SIZE: u64 = 10 * 1024 * 1024;
@@ -78,18 +75,14 @@ fn main() -> iced::Result {
 
     debug!("args: {args:?}");
 
-    let logger = Logger::with(
-        LogSpecBuilder::new()
-            .default(log::LevelFilter::Info)
-            .build(),
-    )
-    .log_to_file(FileSpec::default().directory("/tmp/ashell"))
-    .duplicate_to_stdout(flexi_logger::Duplicate::All)
-    .rotate(
-        Criterion::AgeOrSize(Age::Day, TMP_FILE_SIZE),
-        Naming::Timestamps,
-        Cleanup::KeepLogFiles(7),
-    );
+    let logger = Logger::with(LogSpecBuilder::new().default(log::LevelFilter::Info).build())
+        .log_to_file(FileSpec::default().directory("/tmp/ashell"))
+        .duplicate_to_stdout(flexi_logger::Duplicate::All)
+        .rotate(
+            Criterion::AgeOrSize(Age::Day, TMP_FILE_SIZE),
+            Naming::Timestamps,
+            Cleanup::KeepLogFiles(7),
+        );
     let logger = if cfg!(debug_assertions) {
         logger.duplicate_to_stdout(flexi_logger::Duplicate::All)
     } else {
@@ -97,13 +90,9 @@ fn main() -> iced::Result {
     };
     let logger = logger.start().unwrap_or_else(|e| {
         eprintln!("Failed to initialize file logger: {e}, falling back to stderr-only");
-        Logger::with(
-            LogSpecBuilder::new()
-                .default(log::LevelFilter::Info)
-                .build(),
-        )
-        .start()
-        .expect("critical: cannot initialize any logger")
+        Logger::with(LogSpecBuilder::new().default(log::LevelFilter::Info).build())
+            .start()
+            .expect("critical: cannot initialize any logger")
     });
     panic::set_hook(Box::new(|info| {
         let b = Backtrace::capture();
@@ -132,26 +121,22 @@ fn main() -> iced::Result {
         config::Layer::Overlay => Layer::Overlay,
     };
 
-    iced::application(
-        App::new((logger, config.clone(), config_path)),
-        App::update,
-        App::view,
-    )
-    .layer_shell(LayerShellSettings {
-        anchor: Anchor::TOP | Anchor::LEFT | Anchor::RIGHT,
-        layer: iced_layer,
-        exclusive_zone: height as i32,
-        size: Some((0, height as u32)),
-        keyboard_interactivity: KeyboardInteractivity::None,
-        namespace: "ashell-main-layer".into(),
-        ..Default::default()
-    })
-    .subscription(App::subscription)
-    .theme(App::theme)
-    .scale_factor(App::scale_factor)
-    .font(NERD_FONT)
-    .font(NERD_FONT_MONO)
-    .font(CUSTOM_FONT)
-    .default_font(font)
-    .run()
+    iced::application(App::new((logger, config.clone(), config_path)), App::update, App::view)
+        .layer_shell(LayerShellSettings {
+            anchor: Anchor::TOP | Anchor::LEFT | Anchor::RIGHT,
+            layer: iced_layer,
+            exclusive_zone: height as i32,
+            size: Some((0, height as u32)),
+            keyboard_interactivity: KeyboardInteractivity::None,
+            namespace: "ashell-main-layer".into(),
+            ..Default::default()
+        })
+        .subscription(App::subscription)
+        .theme(App::theme)
+        .scale_factor(App::scale_factor)
+        .font(NERD_FONT)
+        .font(NERD_FONT_MONO)
+        .font(CUSTOM_FONT)
+        .default_font(font)
+        .run()
 }

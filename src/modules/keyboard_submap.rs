@@ -33,11 +33,7 @@ impl KeyboardSubmap {
     pub fn view(&self) -> Option<Element<'_, Message>> {
         let submap = self.service.as_ref()?.submap.as_ref()?;
 
-        if !submap.is_empty() {
-            Some(text(submap).into())
-        } else {
-            None
-        }
+        if !submap.is_empty() { Some(text(submap).into()) } else { None }
     }
 
     pub fn subscription(&self) -> Subscription<Message> {

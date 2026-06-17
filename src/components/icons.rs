@@ -304,9 +304,7 @@ impl Icon for DynamicIcon {
     }
 
     fn to_text_mono<'a>(self) -> Text<'a> {
-        text(self.0)
-            .font(Font::with_name("Symbols Nerd Font Mono"))
-            .line_height(1.0)
+        text(self.0).font(Font::with_name("Symbols Nerd Font Mono")).line_height(1.0)
     }
 }
 
@@ -431,9 +429,7 @@ impl<'a, I: Icon, Message> IconButton<'a, I, Message> {
     }
 }
 
-impl<'a, I: Icon, Message: 'static + Clone> From<IconButton<'a, I, Message>>
-    for Element<'a, Message>
-{
+impl<'a, I: Icon, Message: 'static + Clone> From<IconButton<'a, I, Message>> for Element<'a, Message> {
     #[inline]
     fn from(value: IconButton<'a, I, Message>) -> Self {
         let (theme_font_size, radius) = use_theme(|theme| (theme.font_size, theme.radius));
@@ -457,14 +453,10 @@ impl<'a, I: Icon, Message: 'static + Clone> From<IconButton<'a, I, Message>>
         };
 
         let btn = button_fn(
-            container(
-                icon_mono(value.icon)
-                    .size(font_size)
-                    .color_maybe(value.color),
-            )
-            .center_x(Length::Fixed(container_size))
-            .center_y(Length::Fixed(container_size))
-            .clip(true),
+            container(icon_mono(value.icon).size(font_size).color_maybe(value.color))
+                .center_x(Length::Fixed(container_size))
+                .center_y(Length::Fixed(container_size))
+                .clip(true),
         )
         .padding(0)
         .style(style);
@@ -479,9 +471,7 @@ impl<'a, I: Icon, Message: 'static + Clone> From<IconButton<'a, I, Message>>
     }
 }
 
-pub fn icon_button<'a, Message: 'static + Clone>(
-    icon: impl Into<IconKind>,
-) -> IconButton<'a, IconKind, Message> {
+pub fn icon_button<'a, Message: 'static + Clone>(icon: impl Into<IconKind>) -> IconButton<'a, IconKind, Message> {
     let icon = icon.into();
     IconButton {
         icon,

@@ -16,11 +16,7 @@ pub enum IndicatorState {
 pub fn format_duration(duration: &Duration) -> String {
     let h = duration.as_secs() / 60 / 60;
     let m = duration.as_secs() / 60 % 60;
-    if h > 0 {
-        format!("{h}h {m:>2}m")
-    } else {
-        format!("{m:>2}m")
-    }
+    if h > 0 { format!("{h}h {m:>2}m") } else { format!("{m:>2}m") }
 }
 
 pub fn truncate_text(value: &str, max_length: u32) -> String {
