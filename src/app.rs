@@ -79,6 +79,7 @@ pub enum Message {
     None,
     ToggleVisibility,
     SaveState,
+    Event(osd::OsdMessage),
 }
 
 impl App {
@@ -228,11 +229,8 @@ impl App {
                     if let Some(task) = task {
                         tasks.push(task.map(Message::Settings));
                     }
-                    if self.osd.config().enabled
-                        && !self.outputs.menu_is_open()
-                        && let Some(osd) = osd
-                    {
-                        tasks.push(Task::done(Message::Osd(osd::Message::Show(osd))));
+                    if let Some(osd) = osd {
+                        tasks.push(Task::done(Message::Event(osd)));
                     }
                     Task::batch(tasks)
                 }
@@ -281,7 +279,6 @@ impl App {
             Message::IpcOsdCommand(cmd) => {
                 let mut tasks = vec![];
 
-                // Execute the action via Settings.
                 let action = match &cmd {
                     IpcCommand::VolumeUp { .. } => self.settings.volume_adjust(true),
                     IpcCommand::VolumeDown { .. } => self.settings.volume_adjust(false),
@@ -299,16 +296,26 @@ impl App {
                     if let Some(task) = task {
                         tasks.push(task.map(Message::Settings));
                     }
-                    // Show OSD overlay if enabled.
-                    if self.osd.config().enabled
-                        && !self.outputs.menu_is_open()
-                        && !cmd.no_osd()
+                    if !cmd.no_osd()
                         && let Some(osd) = osd
                     {
-                        tasks.push(Task::done(Message::Osd(osd::Message::Show(osd))));
+                        tasks.push(Task::done(Message::Event(osd)));
                     }
                 }
                 Task::batch(tasks)
+            }
+            Message::Event(event) => {
+                if !self.outputs.menu_is_open() {
+                    match self.osd.update(osd::Message::Show(event)) {
+                        osd::Action::Show(timer) => Task::batch(vec![
+                            timer.map(Message::Osd),
+                            self.outputs.show_osd_layer(OSD_WIDTH, OSD_HEIGHT),
+                        ]),
+                        _ => Task::none(),
+                    }
+                } else {
+                    Task::none()
+                }
             }
             Message::Osd(msg) => match self.osd.update(msg) {
                 osd::Action::Show(timer) => Task::batch(vec![

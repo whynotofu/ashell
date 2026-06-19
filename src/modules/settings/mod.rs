@@ -272,17 +272,19 @@ impl Settings {
                 Action::None
             }
             Message::CyclePlatformProfile => {
-                let profile = match self.device.get_platform_profile() {
-                    PlatformProfile::LowPower => PlatformProfile::Balanced,
-                    PlatformProfile::Balanced => PlatformProfile::Performance,
-                    PlatformProfile::Performance => PlatformProfile::LowPower,
-                };
-                self.device.set_platform_profile(profile);
+                if let Some(profile) = self.device.get_platform_profile() {
+                    let profile = match profile {
+                        PlatformProfile::LowPower => PlatformProfile::Balanced,
+                        PlatformProfile::Balanced => PlatformProfile::Performance,
+                        PlatformProfile::Performance => PlatformProfile::LowPower,
+                    };
+                    self.device.set_platform_profile(profile);
+                }
                 Action::None
             }
             Message::CycleBatteryProtection => {
-                if let Some(battery_protection) = self.device.get_battery_protection() {
-                    let protection = match battery_protection {
+                if let Some(protection) = self.device.get_battery_protection() {
+                    let protection = match protection {
                         BatteryProtection::Off => BatteryProtection::On,
                         BatteryProtection::On => BatteryProtection::Stationary,
                         BatteryProtection::Stationary => BatteryProtection::Off,
@@ -432,10 +434,10 @@ impl Settings {
                 }
                 Action::None
             }
-            Message::Device(message) => {
-                self.device.update(message);
-                Action::None
-            }
+            Message::Device(message) => match self.device.update(message) {
+                device::Action::Event(event) => Action::Response(None, Some(event)),
+                _ => Action::None,
+            },
             Message::Lock => {
                 if let Some(lock_cmd) = &self.lock_cmd {
                     crate::utils::launcher::execute_command(lock_cmd.to_string());
@@ -603,8 +605,7 @@ impl Settings {
                 )
             }));
 
-            if self.device.has_platform_profile() {
-                let platform_profile = self.device.get_platform_profile();
+            if let Some(platform_profile) = self.device.get_platform_profile() {
                 quick_settings.push(Some((
                     quick_setting_button(
                         StaticIcon::Balanced,
@@ -635,13 +636,13 @@ impl Settings {
                 )));
             }
 
-            if let Some(backlight) = self.device.get_keyboard_backlight() {
-                let active = backlight != KeyboardBacklight::Off;
+            if let Some(keyboard_backlight) = self.device.get_keyboard_backlight() {
+                let active = keyboard_backlight != KeyboardBacklight::Off;
                 quick_settings.push(Some((
                     quick_setting_button(
                         StaticIcon::Keyboard,
                         "Keyboard Backlight".to_string(),
-                        Some(backlight.to_string()),
+                        Some(keyboard_backlight.to_string()),
                         active,
                         Message::CycleKeyboardBacklight,
                         None,

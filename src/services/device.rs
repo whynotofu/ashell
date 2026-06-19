@@ -1,8 +1,8 @@
+use crate::osd::OsdMessage;
 use anyhow::{Error, Result, anyhow};
 use iced::{
-    Subscription, Task,
+    Subscription,
     futures::{channel::mpsc, sink::SinkExt},
-    stream,
 };
 use log::warn;
 use std::{fmt, sync::Arc};
@@ -32,6 +32,11 @@ pub enum Message {
     DisplayBrightness(Percentage),
     KeyboardBacklight(KeyboardBacklight),
     PlatformProfile(PlatformProfile),
+}
+
+pub enum Action {
+    Event(OsdMessage),
+    None,
 }
 
 impl DeviceService {
@@ -79,12 +84,8 @@ impl DeviceService {
         self.set_call(3, backlight.to_u8())
     }
 
-    pub fn has_platform_profile(&self) -> bool {
-        self.platform_profile.is_some()
-    }
-
-    pub fn get_platform_profile(&self) -> PlatformProfile {
-        self.platform_profile.unwrap()
+    pub fn get_platform_profile(&self) -> Option<PlatformProfile> {
+        self.platform_profile
     }
 
     pub fn set_platform_profile(&mut self, profile: PlatformProfile) {
@@ -101,7 +102,7 @@ impl DeviceService {
         }
     }
 
-    pub fn update(&mut self, message: Message) -> Task<Message> {
+    pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::Synced(writer) => self.writer = Some(writer),
             Message::Reset => {
@@ -123,17 +124,22 @@ impl DeviceService {
             }
             Message::KeyboardBacklight(backlight) => {
                 self.keyboard_backlight = Some(backlight);
+                if backlight.to_u8() > 0 && self.writer.is_some() {
+                    return Action::Event(OsdMessage::KeyboardBacklight {
+                        brightness: (backlight.to_u8() as f32) / 3.0,
+                    });
+                }
             }
             Message::PlatformProfile(profile) => {
                 self.platform_profile = Some(profile);
             }
         }
-        Task::none()
+        Action::None
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
         Subscription::run(|| {
-            stream::channel(100, |mut output: mpsc::Sender<Message>| async move {
+            iced::stream::channel(100, |mut output: mpsc::Sender<Message>| async move {
                 if let Err(e) = Self::feed(&mut output).await {
                     warn!("DeviceService::feed: {}", e);
                 }
