@@ -21,8 +21,8 @@ impl KeyboardBacklightSettings {
             Message::NextKeyboardBacklightLevel => match keyboard_backlight {
                 KeyboardBacklight::Off => KeyboardBacklight::Low,
                 KeyboardBacklight::Low => KeyboardBacklight::Medium,
-                KeyboardBacklight::Medium => KeyboardBacklight::High,
-                KeyboardBacklight::High => KeyboardBacklight::Off,
+                KeyboardBacklight::Medium => KeyboardBacklight::Max,
+                KeyboardBacklight::Max => KeyboardBacklight::Off,
             },
         }
     }

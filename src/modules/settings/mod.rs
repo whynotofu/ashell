@@ -298,8 +298,8 @@ impl Settings {
                     let backlight = match backlight {
                         KeyboardBacklight::Off => KeyboardBacklight::Low,
                         KeyboardBacklight::Low => KeyboardBacklight::Medium,
-                        KeyboardBacklight::Medium => KeyboardBacklight::High,
-                        KeyboardBacklight::High => KeyboardBacklight::Off,
+                        KeyboardBacklight::Medium => KeyboardBacklight::Max,
+                        KeyboardBacklight::Max => KeyboardBacklight::Off,
                     };
                     self.device.set_keyboard_backlight(backlight);
                 }
@@ -434,10 +434,10 @@ impl Settings {
                 }
                 Action::None
             }
-            Message::Device(message) => match self.device.update(message) {
-                device::Action::Event(event) => Action::Response(None, Some(event)),
-                _ => Action::None,
-            },
+            Message::Device(message) => {
+                self.device.update(message);
+                Action::None
+            }
             Message::Lock => {
                 if let Some(lock_cmd) = &self.lock_cmd {
                     crate::utils::launcher::execute_command(lock_cmd.to_string());

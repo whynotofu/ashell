@@ -1,11 +1,10 @@
-use crate::osd::OsdMessage;
-use anyhow::{Error, Result, anyhow};
+use anyhow::{Context, Error, Result, anyhow};
 use iced::{
     Subscription,
     futures::{channel::mpsc, sink::SinkExt},
 };
 use log::warn;
-use std::{fmt, sync::Arc};
+use std::{fmt, sync::Arc, time::Duration};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{UnixStream, unix::OwnedWriteHalf},
@@ -32,11 +31,6 @@ pub enum Message {
     DisplayBrightness(Percentage),
     KeyboardBacklight(KeyboardBacklight),
     PlatformProfile(PlatformProfile),
-}
-
-pub enum Action {
-    Event(OsdMessage),
-    None,
 }
 
 impl DeviceService {
@@ -102,7 +96,7 @@ impl DeviceService {
         }
     }
 
-    pub fn update(&mut self, message: Message) -> Action {
+    pub fn update(&mut self, message: Message) {
         match message {
             Message::Synced(writer) => self.writer = Some(writer),
             Message::Reset => {
@@ -124,47 +118,59 @@ impl DeviceService {
             }
             Message::KeyboardBacklight(backlight) => {
                 self.keyboard_backlight = Some(backlight);
-                if backlight.to_u8() > 0 && self.writer.is_some() {
-                    return Action::Event(OsdMessage::KeyboardBacklight {
-                        brightness: (backlight.to_u8() as f32) / 3.0,
-                    });
-                }
             }
             Message::PlatformProfile(profile) => {
                 self.platform_profile = Some(profile);
             }
         }
-        Action::None
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
         Subscription::run(|| {
             iced::stream::channel(100, |mut output: mpsc::Sender<Message>| async move {
-                if let Err(e) = Self::feed(&mut output).await {
-                    warn!("DeviceService::feed: {}", e);
+                let intervals = [2u16, 5, 10, 15, 30, 60, 600];
+                let mut atempt = 0;
+
+                loop {
+                    atempt += 1;
+
+                    if let Err(e) = Self::connect(&mut output, &mut atempt).await {
+                        warn!("DeviceService: {}", e);
+                    }
+                    output.send(Message::Reset).await.expect("Failed to reset!");
+
+                    if atempt <= intervals.len() {
+                        tokio::time::sleep(Duration::from_secs(intervals[atempt - 1] as u64)).await
+                    } else {
+                        break;
+                    }
                 }
-                output.send(Message::Reset).await.expect("Failed to reset!");
             })
         })
     }
 
-    async fn feed(output: &mut mpsc::Sender<Message>) -> Result<()> {
-        let (mut reader, mut writer) = UnixStream::connect("/tmp/device.sock").await?.into_split();
+    async fn connect(output: &mut mpsc::Sender<Message>, atempt: &mut usize) -> Result<()> {
+        let Ok(stream) = UnixStream::connect("/tmp/device.sock").await else {
+            return Ok(());
+        };
+
+        let (mut reader, mut writer) = stream.into_split();
         let mut message = [0u8; 2];
         let mut synced = false;
 
-        writer.write_all(&[255, 255]).await?;
+        writer.write_all(&[255, 255]).await.context("Service down.")?;
 
         let writer = Arc::new(Mutex::new(writer));
 
         loop {
-            reader.read_exact(&mut message).await?;
+            reader.read_exact(&mut message).await.context("Service down.")?;
             let (code, value) = (message[0], message[1]);
 
             if code == 255 {
                 if value == 1 && !synced {
                     output.send(Message::Synced(Arc::clone(&writer))).await?;
                     synced = true;
+                    *atempt = 1;
                 } else {
                     return Err(anyhow!("Protocol error."));
                 }
@@ -310,7 +316,7 @@ pub enum KeyboardBacklight {
     Off,
     Low,
     Medium,
-    High,
+    Max,
 }
 
 impl KeyboardBacklight {
@@ -319,7 +325,7 @@ impl KeyboardBacklight {
             KeyboardBacklight::Off => "Off",
             KeyboardBacklight::Low => "Low",
             KeyboardBacklight::Medium => "Medium",
-            KeyboardBacklight::High => "High",
+            KeyboardBacklight::Max => "Max",
         }
     }
     fn to_u8(&self) -> u8 {
@@ -327,7 +333,7 @@ impl KeyboardBacklight {
             KeyboardBacklight::Off => 0,
             KeyboardBacklight::Low => 1,
             KeyboardBacklight::Medium => 2,
-            KeyboardBacklight::High => 3,
+            KeyboardBacklight::Max => 3,
         }
     }
 }
@@ -339,7 +345,7 @@ impl TryFrom<u8> for KeyboardBacklight {
             0 => Ok(KeyboardBacklight::Off),
             1 => Ok(KeyboardBacklight::Low),
             2 => Ok(KeyboardBacklight::Medium),
-            3 => Ok(KeyboardBacklight::High),
+            3 => Ok(KeyboardBacklight::Max),
             _ => Err(anyhow!("Unknow keyboard backlight code.")),
         }
     }

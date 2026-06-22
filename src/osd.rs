@@ -29,7 +29,6 @@ pub enum OsdMessage {
     Brightness { value: f32 },
     Airplane { active: bool },
     IdleInhibitor { active: bool },
-    KeyboardBacklight { brightness: f32 },
 }
 
 #[derive(Debug, Clone)]
@@ -55,10 +54,6 @@ impl Osd {
             message: None,
             timeout_handle: None,
         }
-    }
-
-    pub fn config(&self) -> &OsdConfig {
-        &self.config
     }
 
     pub fn update(&mut self, message: Message) -> Action {
@@ -108,7 +103,6 @@ impl Osd {
                 OsdMessage::Brightness { .. } => StaticIcon::Brightness,
                 OsdMessage::Airplane { active } => NetworkSettings::airplane_mode_icon(active),
                 OsdMessage::IdleInhibitor { active } => IdleInhibitorManager::idle_inhibitor_icon(active),
-                OsdMessage::KeyboardBacklight { .. } => StaticIcon::Keyboard,
             };
 
             let detail: Element<'_, Message> = match message {
@@ -124,10 +118,6 @@ impl Osd {
                     if value == 0.0 {
                         bar = bar.style(progress_bar::secondary);
                     }
-                    container(bar).center_x(Length::Fill).into()
-                }
-                OsdMessage::KeyboardBacklight { brightness } => {
-                    let bar = progress_bar(0.0..=1.0, brightness).length(160.0).girth(8.0);
                     container(bar).center_x(Length::Fill).into()
                 }
                 OsdMessage::Airplane { active } | OsdMessage::IdleInhibitor { active } => {
