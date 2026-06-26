@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        MenuSize, brightness_slider_control, format_indicator,
+        BatteryIndicator, MenuSize, brightness_slider_control, format_indicator,
         icons::{StaticIcon, icon, icon_button},
         password_dialog, quick_setting_button, sub_menu_wrapper,
     },
@@ -25,8 +25,9 @@ use crate::{
 };
 use iced::{
     Element, Length, Subscription, SurfaceId, Task, Theme,
+    alignment::Alignment,
     mouse::ScrollDelta,
-    widget::{Column, Row, Space, container, row, space, text},
+    widget::{Column, Row, Space, canvas, container, row, space, text},
 };
 
 pub(crate) mod audio;
@@ -747,7 +748,16 @@ impl Settings {
                     }
                 }
                 SettingsIndicator::Battery => {
-                    if let Some((charge, _status)) = self.device.get_battery_info() {
+                    if let Some((charge, status)) = self.device.get_battery_info() {
+                        row = row.push(
+                            canvas(BatteryIndicator {
+                                percent: charge.to_u8(),
+                                status,
+                            })
+                            .width(33.0),
+                        );
+                        // row = row.push(BatteryWidget::new(charge.to_u8(), false));
+                        /*
                         let icon = get_battery_icon(charge.to_u8());
                         let state = if charge.to_u8() < 15 {
                             IndicatorState::Danger
@@ -760,6 +770,7 @@ impl Settings {
                             text(format!("{}%", charge)).into(),
                             state,
                         ));
+                        */
                     }
                 }
                 SettingsIndicator::PeripheralBattery => {
@@ -784,7 +795,7 @@ impl Settings {
             }
         }
 
-        row.spacing(space.xs).into()
+        row.align_y(Alignment::Center).spacing(space.xs).into()
     }
 
     fn brightness_indicator_on_scroll(current: u8) -> impl Fn(ScrollDelta) -> Message {

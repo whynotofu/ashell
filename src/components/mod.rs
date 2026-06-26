@@ -1,3 +1,4 @@
+mod battery_indicator;
 mod brightness_slider_control;
 pub mod button;
 mod centerbox;
@@ -13,6 +14,7 @@ mod quick_setting_button;
 mod slider_control;
 mod sub_menu_wrapper;
 
+pub use battery_indicator::*;
 pub use brightness_slider_control::*;
 pub use button::*;
 pub use centerbox::*;

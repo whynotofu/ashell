@@ -130,10 +130,12 @@ pub enum StaticIcon {
     Bell,
     BellBadge,
     Delete,
+    Lightning,
+    Shield,
 }
 
 impl StaticIcon {
-    fn get_str(&self) -> &'static str {
+    pub fn get_str(&self) -> &'static str {
         match self {
             StaticIcon::None => "",
             StaticIcon::Refresh => "\u{f0453}",
@@ -244,6 +246,8 @@ impl StaticIcon {
             StaticIcon::Bell => "\u{eaa2}",
             StaticIcon::BellBadge => "\u{eb9a}",
             StaticIcon::Delete => "\u{f01b4}",
+            StaticIcon::Lightning => "\u{f140b}",
+            StaticIcon::Shield => "\u{f132}",
         }
     }
 

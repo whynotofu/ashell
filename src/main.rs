@@ -134,6 +134,7 @@ fn main() -> iced::Result {
         .subscription(App::subscription)
         .theme(App::theme)
         .scale_factor(App::scale_factor)
+        .antialiasing(true)
         .font(NERD_FONT)
         .font(NERD_FONT_MONO)
         .font(CUSTOM_FONT)
